@@ -72,7 +72,7 @@
 #   define pixel4 uint32_t
 #   define dctcoef int16_t
 
-#   define INIT_CLIP
+#   define INIT_CLIP const uint8_t *cm = ff_crop_tab + MAX_NEG_CROP;
 #   define no_rnd_avg_pixel4 no_rnd_avg32
 #   define    rnd_avg_pixel4    rnd_avg32
 #   define AV_RN2P  AV_RN16
@@ -84,7 +84,7 @@
 #   define PIXEL_SPLAT_X4(x) ((x)*0x01010101U)
 
 #   define av_clip_pixel(a) av_clip_uint8(a)
-#   define CLIP(a) av_clip_uint8(a)
+#   define CLIP(a) cm[a]
 #endif
 
 #define FUNC3(a, b, c)  a ## _ ## b ## c
