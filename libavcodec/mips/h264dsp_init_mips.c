@@ -128,8 +128,8 @@ static av_cold void h264dsp_init_mmi(H264DSPContext * c, const int bit_depth,
         }
 
         c->h264_v_loop_filter_luma = ff_deblock_v_luma_8_mmi;
-        c->h264_v_loop_filter_luma_intra = ff_deblock_v_luma_intra_8_mmi;
         c->h264_h_loop_filter_luma = ff_deblock_h_luma_8_mmi;
+        c->h264_v_loop_filter_luma_intra = ff_deblock_v_luma_intra_8_mmi;
         c->h264_h_loop_filter_luma_intra = ff_deblock_h_luma_intra_8_mmi;
     }
 }
