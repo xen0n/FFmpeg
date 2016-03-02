@@ -34,17 +34,17 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
     const int C = (8 - x) * y;
     const int D = x * y;
     const int E = B + C;
-    double ftmp[9];
+    double ftmp[10];
     uint64_t tmp[1];
     mips_reg addr[1];
-
-    av_assert2(x<8 && y<8 && x>=0 && y>=0);
 
     if (D) {
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "pshufh     %[B],       %[B],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp9]                            \n\t"
             "pshufh     %[C],       %[C],           %[ftmp0]            \n\t"
             "pshufh     %[D],       %[D],           %[ftmp0]            \n\t"
             "1:                                                         \n\t"
@@ -80,25 +80,23 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pmullh     %[ftmp8],   %[ftmp8],       %[D]                \n\t"
             "paddh      %[ftmp4],   %[ftmp6],       %[ftmp8]            \n\t"
 
-            "dli        %[tmp0],    0x06                                \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_32]         \n\t"
-            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
-            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp9]            \n\t"
+            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp9]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            "addi       %[h],       %[h],           -0x01               \n\t"
             "sdc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
-            PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
+            PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
-              [ftmp8]"=&f"(ftmp[8]),
+              [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
@@ -113,8 +111,10 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
 
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "pshufh     %[E],       %[E],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp7]                            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[step]             \n\t"
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
@@ -133,22 +133,20 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pmullh     %[ftmp6],   %[ftmp6],       %[E]                \n\t"
             "paddh      %[ftmp2],   %[ftmp4],       %[ftmp6]            \n\t"
 
-            "dli        %[tmp0],    0x06                                \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_32]         \n\t"
-            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
-            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp7]            \n\t"
+            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp7]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            "addi       %[h],       %[h],           -0x01               \n\t"
             "sdc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
-              [ftmp6]"=&f"(ftmp[6]),
+              [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
@@ -161,30 +159,45 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
     } else {
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp4]                            \n\t"
             "1:                                                         \n\t"
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
-
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
             "pmullh     %[ftmp2],   %[ftmp3],       %[A]                \n\t"
-
-            "dli        %[tmp0],    0x06                                \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_32]         \n\t"
-            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
-            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp4]            \n\t"
+            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             "sdc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
+
+            PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
+            "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
+            "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
+            "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
+            "pmullh     %[ftmp2],   %[ftmp3],       %[A]                \n\t"
+            "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
+            "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_32]         \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp4]            \n\t"
+            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
+            "packushb   %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            "addi       %[h],       %[h],           -0x02               \n\t"
+            "sdc1       %[ftmp1],   0x00(%[dst])                        \n\t"
+
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
+              [ftmp4]"=&f"(ftmp[4]),
               [tmp0]"=&r"(tmp[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
               [h]"+&r"(h)
@@ -203,17 +216,17 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
     const int C = (8 - x) * y;
     const int D = x * y;
     const int E = B + C;
-    double ftmp[9];
+    double ftmp[10];
     uint64_t tmp[1];
     mips_reg addr[1];
-
-    av_assert2(x<8 && y<8 && x>=0 && y>=0);
 
     if (D) {
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "pshufh     %[B],       %[B],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp9]                            \n\t"
             "pshufh     %[C],       %[C],           %[ftmp0]            \n\t"
             "pshufh     %[D],       %[D],           %[ftmp0]            \n\t"
             "1:                                                         \n\t"
@@ -249,19 +262,17 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pmullh     %[ftmp8],   %[ftmp8],       %[D]                \n\t"
             "paddh      %[ftmp4],   %[ftmp6],       %[ftmp8]            \n\t"
 
-            "dli        %[tmp0],    0x06                                \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_32]         \n\t"
-            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
-            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp9]            \n\t"
+            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp9]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
             "ldc1       %[ftmp2],   0x00(%[dst])                        \n\t"
             "pavgb      %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            "addi       %[h],       %[h],           -0x01               \n\t"
             "sdc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
@@ -269,7 +280,7 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
-              [ftmp8]"=&f"(ftmp[8]),
+              [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
@@ -284,8 +295,10 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
 
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "pshufh     %[E],       %[E],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp7]                            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[step]             \n\t"
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
@@ -304,24 +317,22 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pmullh     %[ftmp6],   %[ftmp6],       %[E]                \n\t"
             "paddh      %[ftmp2],   %[ftmp4],       %[ftmp6]            \n\t"
 
-            "dli        %[tmp0],    0x06                                \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_32]         \n\t"
-            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
-            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp7]            \n\t"
+            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp7]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
             "ldc1       %[ftmp2],   0x00(%[dst])                        \n\t"
             "pavgb      %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            "addi       %[h],       %[h],           -0x01               \n\t"
             "sdc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
-              [ftmp6]"=&f"(ftmp[6]),
+              [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
@@ -334,32 +345,49 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
     } else {
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp4]                            \n\t"
             "1:                                                         \n\t"
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
-
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
             "pmullh     %[ftmp2],   %[ftmp3],       %[A]                \n\t"
-
-            "dli        %[tmp0],    0x06                                \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_32]         \n\t"
-            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
-            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp4]            \n\t"
+            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
             "ldc1       %[ftmp2],   0x00(%[dst])                        \n\t"
             "pavgb      %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             "sdc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
+            PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
+
+            "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
+            "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
+            "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
+            "pmullh     %[ftmp2],   %[ftmp3],       %[A]                \n\t"
+            "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
+            "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_32]         \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp4]            \n\t"
+            "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
+            "packushb   %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            "ldc1       %[ftmp2],   0x00(%[dst])                        \n\t"
+            "pavgb      %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            "addi       %[h],       %[h],           -0x02               \n\t"
+            "sdc1       %[ftmp1],   0x00(%[dst])                        \n\t"
+
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
+              [ftmp4]"=&f"(ftmp[4]),
               [tmp0]"=&r"(tmp[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
               [h]"+&r"(h)
@@ -378,17 +406,17 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
     const int C = (8 - x) *  y;
     const int D = x *  y;
     const int E = B + C;
-    double ftmp[7];
+    double ftmp[8];
     uint64_t tmp[1];
     mips_reg addr[1];
-
-    av_assert2(x<8 && y<8 && x>=0 && y>=0);
 
     if (D) {
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "pshufh     %[B],       %[B],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp7]                            \n\t"
             "pshufh     %[C],       %[C],           %[ftmp0]            \n\t"
             "pshufh     %[D],       %[D],           %[ftmp0]            \n\t"
             "1:                                                         \n\t"
@@ -414,21 +442,19 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pmullh     %[ftmp6],   %[ftmp6],       %[D]                \n\t"
             "paddh      %[ftmp2],   %[ftmp5],       %[ftmp6]            \n\t"
 
-            "dli        %[tmp0],    0x06                                \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
-            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp7]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
+            "addi       %[h],       %[h],           -0x01               \n\t"
             "swc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
-            PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
+            PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
-              [ftmp6]"=&f"(ftmp[6]),
+              [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
@@ -443,8 +469,10 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
 
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "pshufh     %[E],       %[E],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp5]                            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[step]             \n\t"
             "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
@@ -458,19 +486,17 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pmullh     %[ftmp4],   %[ftmp4],       %[E]                \n\t"
             "paddh      %[ftmp1],   %[ftmp3],       %[ftmp4]            \n\t"
 
-            "dli        %[tmp0],    0x06                                \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
-            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp5]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
+            "addi       %[h],       %[h],           -0x01               \n\t"
             "swc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
-              [ftmp4]"=&f"(ftmp[4]),
+              [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
@@ -483,21 +509,31 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
     } else {
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "1:                                                         \n\t"
             "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
             "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
-
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
-
-            "dli        %[tmp0],    0x06                                \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
             "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
+            PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             "swc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
+            PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
+
+            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
+            "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
+            "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
+            "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
+            "addi       %[h],       %[h],           -0x02               \n\t"
+            "swc1       %[ftmp1],   0x00(%[dst])                        \n\t"
+
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
@@ -521,17 +557,17 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
     const int C = (8 - x) * y;
     const int D = x * y;
     const int E = B + C;
-    double ftmp[7];
+    double ftmp[8];
     uint64_t tmp[1];
     mips_reg addr[1];
-
-    av_assert2(x<8 && y<8 && x>=0 && y>=0);
 
     if (D) {
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "pshufh     %[B],       %[B],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp7]                            \n\t"
             "pshufh     %[C],       %[C],           %[ftmp0]            \n\t"
             "pshufh     %[D],       %[D],           %[ftmp0]            \n\t"
             "1:                                                         \n\t"
@@ -557,23 +593,21 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pmullh     %[ftmp6],   %[ftmp6],       %[D]                \n\t"
             "paddh      %[ftmp2],   %[ftmp5],       %[ftmp6]            \n\t"
 
-            "dli        %[tmp0],    0x06                                \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
-            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp7]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
             "lwc1       %[ftmp2],   0x00(%[dst])                        \n\t"
             "pavgb      %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            "addi       %[h],       %[h],           -0x01               \n\t"
             "swc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
-            PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
+            PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
-              [ftmp6]"=&f"(ftmp[6]),
+              [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
@@ -588,8 +622,10 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
 
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "pshufh     %[E],       %[E],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp5]                            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[step]             \n\t"
             "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
@@ -603,21 +639,19 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pmullh     %[ftmp4],   %[ftmp4],       %[E]                \n\t"
             "paddh      %[ftmp1],   %[ftmp3],       %[ftmp4]            \n\t"
 
-            "dli        %[tmp0],    0x06                                \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
-            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp5]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
             "lwc1       %[ftmp2],   0x00(%[dst])                        \n\t"
             "pavgb      %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            "addi       %[h],       %[h],           -0x01               \n\t"
             "swc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
-              [ftmp4]"=&f"(ftmp[4]),
+              [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
@@ -630,23 +664,35 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
     } else {
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+            "dli        %[tmp0],    0x06                                \n\t"
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
+            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "1:                                                         \n\t"
             "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
             "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
-
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
-
-            "dli        %[tmp0],    0x06                                \n\t"
-            "dmtc1      %[tmp0],    %[ftmp3]                            \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
             "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
             "lwc1       %[ftmp2],   0x00(%[dst])                        \n\t"
             "pavgb      %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             "swc1       %[ftmp1],   0x00(%[dst])                        \n\t"
-            "daddi      %[h],       %[h],           -0x01               \n\t"
+            PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
+
+            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
+            "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
+            "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
+            "psrlh      %[ftmp1],   %[ftmp1],       %[ftmp3]            \n\t"
+            "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
+            "lwc1       %[ftmp2],   0x00(%[dst])                        \n\t"
+            "pavgb      %[ftmp1],   %[ftmp1],       %[ftmp2]            \n\t"
+            "addi       %[h],       %[h],           -0x02               \n\t"
+            "swc1       %[ftmp1],   0x00(%[dst])                        \n\t"
+
             PTR_ADDU   "%[src],     %[src],         %[stride]           \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
             "bnez       %[h],       1b                                  \n\t"
