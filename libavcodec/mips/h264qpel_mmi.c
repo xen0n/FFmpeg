@@ -168,35 +168,50 @@ static inline void put_pixels8_mmi(uint8_t *block, const uint8_t *pixels,
 static inline void put_pixels16_mmi(uint8_t *block, const uint8_t *pixels,
         ptrdiff_t line_size, int h)
 {
-    double ftmp[2];
-    uint64_t tmp[2];
+    double ftmp[8];
 
     __asm__ volatile (
         "1:                                                             \n\t"
         "gsldlc1    %[ftmp0],   0x07(%[pixels])                         \n\t"
         "gsldrc1    %[ftmp0],   0x00(%[pixels])                         \n\t"
-        "ldl        %[tmp0],    0x0f(%[pixels])                         \n\t"
-        "ldr        %[tmp0],    0x08(%[pixels])                         \n\t"
+        "gsldlc1    %[ftmp1],   0x0f(%[pixels])                         \n\t"
+        "gsldrc1    %[ftmp1],   0x08(%[pixels])                         \n\t"
         PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
-        "gsldlc1    %[ftmp1],   0x07(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp1],   0x00(%[pixels])                         \n\t"
-        "ldl        %[tmp1],    0x0f(%[pixels])                         \n\t"
-        "ldr        %[tmp1],    0x08(%[pixels])                         \n\t"
-        "gssdlc1    %[ftmp0],   0x07(%[block])                          \n\t"
-        "gssdrc1    %[ftmp0],   0x00(%[block])                          \n\t"
-        "sdl        %[tmp0],    0x0f(%[block])                          \n\t"
-        "sdr        %[tmp0],    0x08(%[block])                          \n\t"
+        "gsldlc1    %[ftmp2],   0x07(%[pixels])                         \n\t"
+        "gsldrc1    %[ftmp2],   0x00(%[pixels])                         \n\t"
+        "gsldlc1    %[ftmp3],   0x0f(%[pixels])                         \n\t"
+        "gsldrc1    %[ftmp3],   0x08(%[pixels])                         \n\t"
+        PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
+        "gsldlc1    %[ftmp4],   0x07(%[pixels])                         \n\t"
+        "gsldrc1    %[ftmp4],   0x00(%[pixels])                         \n\t"
+        "gsldlc1    %[ftmp5],   0x0f(%[pixels])                         \n\t"
+        "gsldrc1    %[ftmp5],   0x08(%[pixels])                         \n\t"
+        PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
+        "gsldlc1    %[ftmp6],   0x07(%[pixels])                         \n\t"
+        "gsldrc1    %[ftmp6],   0x00(%[pixels])                         \n\t"
+        "gsldlc1    %[ftmp7],   0x0f(%[pixels])                         \n\t"
+        "gsldrc1    %[ftmp7],   0x08(%[pixels])                         \n\t"
+
+        "sdc1       %[ftmp0],   0x00(%[block])                          \n\t"
+        "sdc1       %[ftmp1],   0x08(%[block])                          \n\t"
         PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
-        "gssdlc1    %[ftmp1],   0x07(%[block])                          \n\t"
-        "gssdrc1    %[ftmp1],   0x00(%[block])                          \n\t"
-        "sdl        %[tmp1],    0x0f(%[block])                          \n\t"
-        "sdr        %[tmp1],    0x08(%[block])                          \n\t"
-        "addi       %[h],       %[h],           -0x02                   \n\t"
+        "sdc1       %[ftmp2],   0x00(%[block])                          \n\t"
+        "sdc1       %[ftmp3],   0x08(%[block])                          \n\t"
+        PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
+        "sdc1       %[ftmp4],   0x00(%[block])                          \n\t"
+        "sdc1       %[ftmp5],   0x08(%[block])                          \n\t"
+        PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
+        "sdc1       %[ftmp6],   0x00(%[block])                          \n\t"
+        "sdc1       %[ftmp7],   0x08(%[block])                          \n\t"
+
+        "addi       %[h],       %[h],           -0x04                   \n\t"
         PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
         PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
         "bnez       %[h],       1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
-          [tmp0]"=&r"(tmp[0]),              [tmp1]"=&r"(tmp[1]),
+          [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
+          [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
+          [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
           [block]"+&r"(block),              [pixels]"+&r"(pixels),
           [h]"+&r"(h)
         : [line_size]"r"((mips_reg)line_size)
@@ -262,10 +277,8 @@ static inline void avg_pixels8_mmi(uint8_t *block, const uint8_t *pixels,
         "gsldrc1    %[ftmp3],   0x00(%[addr1])                          \n\t"
         "pavgb      %[ftmp0],   %[ftmp0],       %[ftmp1]                \n\t"
         "pavgb      %[ftmp2],   %[ftmp2],       %[ftmp3]                \n\t"
-        "gssdlc1    %[ftmp0],   0x07(%[block])                          \n\t"
-        "gssdrc1    %[ftmp0],   0x00(%[block])                          \n\t"
-        "gssdlc1    %[ftmp2],   0x07(%[addr1])                          \n\t"
-        "gssdrc1    %[ftmp2],   0x00(%[addr1])                          \n\t"
+        "sdc1       %[ftmp0],   0x00(%[block])                          \n\t"
+        "sdc1       %[ftmp2],   0x00(%[addr1])                          \n\t"
         "addi       %[h],       %[h],           -0x02                   \n\t"
         PTR_ADDU   "%[pixels],  %[addr0],       %[line_size]            \n\t"
         PTR_ADDU   "%[block],   %[addr1],       %[line_size]            \n\t"
@@ -310,14 +323,10 @@ static inline void avg_pixels16_mmi(uint8_t *block, const uint8_t *pixels,
         "pavgb      %[ftmp1],   %[ftmp1],       %[ftmp3]                \n\t"
         "pavgb      %[ftmp4],   %[ftmp4],       %[ftmp6]                \n\t"
         "pavgb      %[ftmp5],   %[ftmp5],       %[ftmp7]                \n\t"
-        "gssdlc1    %[ftmp0],   0x07(%[block])                          \n\t"
-        "gssdrc1    %[ftmp0],   0x00(%[block])                          \n\t"
-        "gssdlc1    %[ftmp1],   0x0f(%[block])                          \n\t"
-        "gssdrc1    %[ftmp1],   0x08(%[block])                          \n\t"
-        "gssdlc1    %[ftmp4],   0x07(%[addr1])                          \n\t"
-        "gssdrc1    %[ftmp4],   0x00(%[addr1])                          \n\t"
-        "gssdlc1    %[ftmp5],   0x0f(%[addr1])                          \n\t"
-        "gssdrc1    %[ftmp5],   0x08(%[addr1])                          \n\t"
+        "sdc1       %[ftmp0],   0x00(%[block])                          \n\t"
+        "sdc1       %[ftmp1],   0x08(%[block])                          \n\t"
+        "sdc1       %[ftmp4],   0x00(%[addr1])                          \n\t"
+        "sdc1       %[ftmp5],   0x08(%[addr1])                          \n\t"
         "addi       %[h],       %[h],           -0x02                   \n\t"
         PTR_ADDU   "%[pixels],  %[addr0],       %[line_size]            \n\t"
         PTR_ADDU   "%[block],   %[addr1],       %[line_size]            \n\t"
