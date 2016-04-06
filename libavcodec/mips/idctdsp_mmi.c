@@ -100,28 +100,27 @@ void ff_put_signed_pixels_clamped_mmi(const int16_t *block,
 {
     int64_t line_skip = line_size;
     int64_t line_skip3 = 0;
-    double ftmp[6];
+    double ftmp[5];
     mips_reg addr[1];
 
     __asm__ volatile (
-        "dmtc1      %[ff_pb_80],    %[ftmp0]                            \n\t"
         PTR_ADDU   "%[line_skip3],  %[line_skip],   %[line_skip]        \n\t"
         "ldc1       %[ftmp1],       0x00(%[block])                      \n\t"
-        "ldc1       %[ftmp5],       0x08(%[block])                      \n\t"
-        "packsshb   %[ftmp1],       %[ftmp1],       %[ftmp5]            \n\t"
+        "ldc1       %[ftmp0],       0x08(%[block])                      \n\t"
+        "packsshb   %[ftmp1],       %[ftmp1],       %[ftmp0]            \n\t"
         "ldc1       %[ftmp2],       0x10(%[block])                      \n\t"
-        "ldc1       %[ftmp5],       0x18(%[block])                      \n\t"
-        "packsshb   %[ftmp2],       %[ftmp2],       %[ftmp5]            \n\t"
+        "ldc1       %[ftmp0],       0x18(%[block])                      \n\t"
+        "packsshb   %[ftmp2],       %[ftmp2],       %[ftmp0]            \n\t"
         "ldc1       %[ftmp3],       0x20(%[block])                      \n\t"
-        "ldc1       %[ftmp5],       0x28(%[block])                      \n\t"
-        "packsshb   %[ftmp3],       %[ftmp3],       %[ftmp5]            \n\t"
+        "ldc1       %[ftmp0],       0x28(%[block])                      \n\t"
+        "packsshb   %[ftmp3],       %[ftmp3],       %[ftmp0]            \n\t"
         "ldc1       %[ftmp4],       48(%[block])                        \n\t"
-        "ldc1       %[ftmp5],       56(%[block])                        \n\t"
-        "packsshb   %[ftmp4],       %[ftmp4],       %[ftmp5]            \n\t"
-        "paddb      %[ftmp1],       %[ftmp1],       %[ftmp0]            \n\t"
-        "paddb      %[ftmp2],       %[ftmp2],       %[ftmp0]            \n\t"
-        "paddb      %[ftmp3],       %[ftmp3],       %[ftmp0]            \n\t"
-        "paddb      %[ftmp4],       %[ftmp4],       %[ftmp0]            \n\t"
+        "ldc1       %[ftmp0],       56(%[block])                        \n\t"
+        "packsshb   %[ftmp4],       %[ftmp4],       %[ftmp0]            \n\t"
+        "paddb      %[ftmp1],       %[ftmp1],       %[ff_pb_80]         \n\t"
+        "paddb      %[ftmp2],       %[ftmp2],       %[ff_pb_80]         \n\t"
+        "paddb      %[ftmp3],       %[ftmp3],       %[ff_pb_80]         \n\t"
+        "paddb      %[ftmp4],       %[ftmp4],       %[ff_pb_80]         \n\t"
         "sdc1       %[ftmp1],       0x00(%[pixels])                     \n\t"
         "gssdxc1    %[ftmp2],       0x00(%[pixels], %[line_skip])       \n\t"
         "gssdxc1    %[ftmp3],       0x00(%[pixels], %[line_skip3])      \n\t"
@@ -130,21 +129,21 @@ void ff_put_signed_pixels_clamped_mmi(const int16_t *block,
         PTR_ADDU   "%[addr0],       %[line_skip3],  %[line_skip]        \n\t"
         PTR_ADDU   "%[pixels],      %[pixels],      %[addr0]            \n\t"
         "ldc1       %[ftmp1],       0x40(%[block])                      \n\t"
-        "ldc1       %[ftmp5],       0x48(%[block])                      \n\t"
-        "packsshb   %[ftmp1],       %[ftmp1],       %[ftmp5]            \n\t"
+        "ldc1       %[ftmp0],       0x48(%[block])                      \n\t"
+        "packsshb   %[ftmp1],       %[ftmp1],       %[ftmp0]            \n\t"
         "ldc1       %[ftmp2],       0x50(%[block])                      \n\t"
-        "ldc1       %[ftmp5],       0x58(%[block])                      \n\t"
-        "packsshb   %[ftmp2],       %[ftmp2],       %[ftmp5]            \n\t"
+        "ldc1       %[ftmp0],       0x58(%[block])                      \n\t"
+        "packsshb   %[ftmp2],       %[ftmp2],       %[ftmp0]            \n\t"
         "ldc1       %[ftmp3],       0x60(%[block])                      \n\t"
-        "ldc1       %[ftmp5],       0x68(%[block])                      \n\t"
-        "packsshb   %[ftmp3],       %[ftmp3],       %[ftmp5]            \n\t"
+        "ldc1       %[ftmp0],       0x68(%[block])                      \n\t"
+        "packsshb   %[ftmp3],       %[ftmp3],       %[ftmp0]            \n\t"
         "ldc1       %[ftmp4],       0x70(%[block])                      \n\t"
-        "ldc1       %[ftmp5],       0x78(%[block])                      \n\t"
-        "packsshb   %[ftmp4],       %[ftmp4],       %[ftmp5]            \n\t"
-        "paddb      %[ftmp1],       %[ftmp1],       %[ftmp0]            \n\t"
-        "paddb      %[ftmp2],       %[ftmp2],       %[ftmp0]            \n\t"
-        "paddb      %[ftmp3],       %[ftmp3],       %[ftmp0]            \n\t"
-        "paddb      %[ftmp4],       %[ftmp4],       %[ftmp0]            \n\t"
+        "ldc1       %[ftmp0],       0x78(%[block])                      \n\t"
+        "packsshb   %[ftmp4],       %[ftmp4],       %[ftmp0]            \n\t"
+        "paddb      %[ftmp1],       %[ftmp1],       %[ff_pb_80]         \n\t"
+        "paddb      %[ftmp2],       %[ftmp2],       %[ff_pb_80]         \n\t"
+        "paddb      %[ftmp3],       %[ftmp3],       %[ff_pb_80]         \n\t"
+        "paddb      %[ftmp4],       %[ftmp4],       %[ff_pb_80]         \n\t"
         "sdc1       %[ftmp1],       0x00(%[pixels])                     \n\t"
         "gssdxc1    %[ftmp2],       0x00(%[pixels], %[line_skip])       \n\t"
         PTR_ADDU   "%[addr0],       %[line_skip],   %[line_skip]        \n\t"
@@ -152,12 +151,12 @@ void ff_put_signed_pixels_clamped_mmi(const int16_t *block,
         "gssdxc1    %[ftmp4],       0x00(%[pixels], %[line_skip3])      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
-          [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
+          [ftmp4]"=&f"(ftmp[4]),
           [addr0]"=&r"(addr[0]),
           [pixels]"+&r"(pixels),            [line_skip3]"+&r"(line_skip3)
         : [block]"r"(block),
           [line_skip]"r"((mips_reg)line_skip),
-          [ff_pb_80]"r"(ff_pb_80)
+          [ff_pb_80]"f"(ff_pb_80)
         : "memory"
     );
 }
