@@ -183,10 +183,10 @@ void ff_dct_unquantize_mpeg1_intra_mmi(MpegEncContext *s, int16_t *block,
     quant_matrix = s->intra_matrix;
 
     __asm__ volatile (
-        "pcmpeqh    %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "dli        %[tmp0],    0x0f                                    \n\t"
-        "dmtc1      %[tmp0],    %[ftmp4]                                \n\t"
-        "dmtc1      %[qscale],  %[ftmp1]                                \n\t"
+        "pcmpeqh    %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
+        "mtc1       %[tmp0],    %[ftmp4]                                \n\t"
+        "mtc1       %[qscale],  %[ftmp1]                                \n\t"
         "psrlh      %[ftmp0],   %[ftmp0],       %[ftmp4]                \n\t"
         "packsswh   %[ftmp1],   %[ftmp1],       %[ftmp1]                \n\t"
         "packsswh   %[ftmp1],   %[ftmp1],       %[ftmp1]                \n\t"
@@ -214,9 +214,9 @@ void ff_dct_unquantize_mpeg1_intra_mmi(MpegEncContext *s, int16_t *block,
         "xor        %[ftmp6],   %[ftmp6],       %[ftmp6]                \n\t"
         "xor        %[ftmp7],   %[ftmp7],       %[ftmp7]                \n\t"
         "pcmpeqh    %[ftmp6],   %[ftmp6],       %[ftmp4]                \n\t"
-        "pcmpeqh    %[ftmp7],   %[ftmp7],       %[ftmp5]                \n\t"
         "dli        %[tmp0],    0x03                                    \n\t"
-        "dmtc1      %[tmp0],    %[ftmp4]                                \n\t"
+        "pcmpeqh    %[ftmp7],   %[ftmp7],       %[ftmp5]                \n\t"
+        "mtc1       %[tmp0],    %[ftmp4]                                \n\t"
         "psrah      %[ftmp2],   %[ftmp2],       %[ftmp4]                \n\t"
         "psrah      %[ftmp3],   %[ftmp3],       %[ftmp4]                \n\t"
         "psubh      %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
@@ -264,10 +264,10 @@ void ff_dct_unquantize_mpeg1_inter_mmi(MpegEncContext *s, int16_t *block,
     quant_matrix = s->inter_matrix;
 
     __asm__ volatile (
-        "pcmpeqh    %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "dli        %[tmp0],    0x0f                                    \n\t"
-        "dmtc1      %[tmp0],    %[ftmp4]                                \n\t"
-        "dmtc1      %[qscale],  %[ftmp1]                                \n\t"
+        "pcmpeqh    %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
+        "mtc1       %[tmp0],    %[ftmp4]                                \n\t"
+        "mtc1       %[qscale],  %[ftmp1]                                \n\t"
         "psrlh      %[ftmp0],   %[ftmp0],       %[ftmp4]                \n\t"
         "packsswh   %[ftmp1],   %[ftmp1],       %[ftmp1]                \n\t"
         "packsswh   %[ftmp1],   %[ftmp1],       %[ftmp1]                \n\t"
@@ -299,9 +299,9 @@ void ff_dct_unquantize_mpeg1_inter_mmi(MpegEncContext *s, int16_t *block,
         "xor        %[ftmp6],   %[ftmp6],       %[ftmp6]                \n\t"
         "xor        %[ftmp7],   %[ftmp7],       %[ftmp7]                \n\t"
         "pcmpeqh    %[ftmp6],   %[ftmp6],       %[ftmp4]                \n\t"
-        "pcmpeqh    %[ftmp7],   %[ftmp7],       %[ftmp5]                \n\t"
         "dli        %[tmp0],    0x04                                    \n\t"
-        "dmtc1      %[tmp0],    %[ftmp4]                                \n\t"
+        "pcmpeqh    %[ftmp7],   %[ftmp7],       %[ftmp5]                \n\t"
+        "mtc1       %[tmp0],    %[ftmp4]                                \n\t"
         "psrah      %[ftmp2],   %[ftmp2],       %[ftmp4]                \n\t"
         "psrah      %[ftmp3],   %[ftmp3],       %[ftmp4]                \n\t"
         "psubh      %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
@@ -358,10 +358,10 @@ void ff_dct_unquantize_mpeg2_intra_mmi(MpegEncContext *s, int16_t *block,
     quant_matrix = s->intra_matrix;
 
     __asm__ volatile (
-        "pcmpeqh    %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "dli        %[tmp0],    0x0f                                    \n\t"
-        "dmtc1      %[tmp0],    %[ftmp3]                                \n\t"
-        "dmtc1      %[qscale],  %[ftmp9]                                \n\t"
+        "pcmpeqh    %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
+        "mtc1       %[tmp0],    %[ftmp3]                                \n\t"
+        "mtc1       %[qscale],  %[ftmp9]                                \n\t"
         "psrlh      %[ftmp0],   %[ftmp0],       %[ftmp3]                \n\t"
         "packsswh   %[ftmp9],   %[ftmp9],       %[ftmp9]                \n\t"
         "packsswh   %[ftmp9],   %[ftmp9],       %[ftmp9]                \n\t"
@@ -389,9 +389,9 @@ void ff_dct_unquantize_mpeg2_intra_mmi(MpegEncContext *s, int16_t *block,
         "xor        %[ftmp5],   %[ftmp5],       %[ftmp5]                \n\t"
         "xor        %[ftmp6],   %[ftmp6],       %[ftmp6]                \n\t"
         "pcmpeqh    %[ftmp5],   %[ftmp5],       %[ftmp3]                \n\t"
-        "pcmpeqh    %[ftmp6] ,  %[ftmp6],       %[ftmp4]                \n\t"
         "dli        %[tmp0],    0x03                                    \n\t"
-        "dmtc1      %[tmp0],    %[ftmp3]                                \n\t"
+        "pcmpeqh    %[ftmp6] ,  %[ftmp6],       %[ftmp4]                \n\t"
+        "mtc1       %[tmp0],    %[ftmp3]                                \n\t"
         "psrah      %[ftmp1],   %[ftmp1],       %[ftmp3]                \n\t"
         "psrah      %[ftmp2],   %[ftmp2],       %[ftmp3]                \n\t"
         "xor        %[ftmp1],   %[ftmp1],       %[ftmp7]                \n\t"

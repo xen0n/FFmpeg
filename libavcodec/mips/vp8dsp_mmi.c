@@ -679,7 +679,7 @@ void ff_vp8_idct_dc_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
 
     __asm__ volatile (
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]             \n\t"
-        "dmtc1      %[dc],      %[ftmp5]                             \n\t"
+        "mtc1       %[dc],      %[ftmp5]                             \n\t"
         "gslwlc1    %[ftmp1],   0x03(%[dst0])                        \n\t"
         "gslwrc1    %[ftmp1],   0x00(%[dst0])                        \n\t"
         "gslwlc1    %[ftmp2],   0x03(%[dst1])                        \n\t"
