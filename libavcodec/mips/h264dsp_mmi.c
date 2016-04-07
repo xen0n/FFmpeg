@@ -1773,9 +1773,9 @@ static void deblock_v8_luma_intra_8_mmi(uint8_t *pix, int stride, int alpha,
           [ftmp14]"=&f"(ftmp[14]),          [ftmp15]"=&f"(ftmp[15]),
 		  [tmp0]"=&r"(tmp[0]),
 		  [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
-		  [addr2]"=&r"(addr[2])
+		  [addr2]"=&r"(addr[2]),
+		  [alpha]"+&r"(alpha),              [beta]"+&r"(beta)
         : [pix]"r"(pix),                    [stride]"r"((mips_reg)stride),
-		  [alpha]"r"((mips_reg)alpha),      [beta]"r"((mips_reg)beta),
 		  [stack]"m"(stack[0]),             [ff_pb_1]"m"(ff_pb_1)
 		: "memory"
 	);
@@ -2508,7 +2508,7 @@ void ff_deblock_h_luma_intra_8_mmi(uint8_t *pix, int stride, int alpha,
 
     __asm__ volatile (
         PTR_ADDU   "%[addr0],   %[stride],      %[stride]               \n\t"
-        PTR_ADDI   "%[addr1],   %[pix],         -0x4                    \n\t"
+        PTR_ADDI   "%[addr1],   %[pix],         -0x04                   \n\t"
         PTR_ADDU   "%[addr2],   %[addr0],       %[stride]               \n\t"
         PTR_ADDU   "%[addr3],   %[addr0],       %[addr0]                \n\t"
         PTR_ADDU   "%[addr4],   %[addr1],       %[addr2]                \n\t"
