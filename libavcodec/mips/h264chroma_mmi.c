@@ -409,6 +409,7 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
     double ftmp[8];
     uint64_t tmp[1];
     mips_reg addr[1];
+    uint64_t low32;
 
     if (D) {
         __asm__ volatile (
@@ -421,14 +422,14 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pshufh     %[D],       %[D],           %[ftmp0]            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[stride]           \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
-            "gslwlc1    %[ftmp2],   0x04(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x01(%[src])                        \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[addr0])                      \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[addr0])                      \n\t"
-            "gslwlc1    %[ftmp4],   0x04(%[addr0])                      \n\t"
-            "gslwrc1    %[ftmp4],   0x01(%[addr0])                      \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
+            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
+            "uld        %[low32],   0x00(%[addr0])                      \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
+            "uld        %[low32],   0x01(%[addr0])                      \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
 
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp6],   %[ftmp2],       %[ftmp0]            \n\t"
@@ -458,7 +459,8 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
-              [h]"+&r"(h)
+              [h]"+&r"(h),
+              [low32]"=&r"(low32)
             : [stride]"r"((mips_reg)stride),[ff_pw_32]"f"(ff_pw_32),
               [A]"f"(A),                    [B]"f"(B),
               [C]"f"(C),                    [D]"f"(D)
@@ -475,10 +477,10 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "mtc1       %[tmp0],    %[ftmp5]                            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[step]             \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[addr0])                      \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[addr0])                      \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
+            "uld        %[low32],   0x00(%[addr0])                      \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
 
             "punpcklbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp4],   %[ftmp2],       %[ftmp0]            \n\t"
@@ -500,7 +502,8 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
-              [h]"+&r"(h)
+              [h]"+&r"(h),
+              [low32]"=&r"(low32)
             : [stride]"r"((mips_reg)stride),[step]"r"((mips_reg)step),
               [ff_pw_32]"f"(ff_pw_32),
               [A]"f"(A),                    [E]"f"(E)
@@ -513,8 +516,8 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "mtc1       %[tmp0],    %[ftmp3]                            \n\t"
             "1:                                                         \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
@@ -524,8 +527,8 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "swc1       %[ftmp1],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
 
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
@@ -541,7 +544,8 @@ void ff_put_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [tmp0]"=&r"(tmp[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
-              [h]"+&r"(h)
+              [h]"+&r"(h),
+              [low32]"=&r"(low32)
             : [stride]"r"((mips_reg)stride),[ff_pw_32]"f"(ff_pw_32),
               [A]"f"(A)
             : "memory"
@@ -560,6 +564,7 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
     double ftmp[8];
     uint64_t tmp[1];
     mips_reg addr[1];
+    uint64_t low32;
 
     if (D) {
         __asm__ volatile (
@@ -572,14 +577,14 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pshufh     %[D],       %[D],           %[ftmp0]            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[stride]           \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
-            "gslwlc1    %[ftmp2],   0x04(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x01(%[src])                        \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[addr0])                      \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[addr0])                      \n\t"
-            "gslwlc1    %[ftmp4],   0x04(%[addr0])                      \n\t"
-            "gslwrc1    %[ftmp4],   0x01(%[addr0])                      \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
+            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
+            "uld        %[low32],   0x00(%[addr0])                      \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
+            "uld        %[low32],   0x01(%[addr0])                      \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
 
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp6],   %[ftmp2],       %[ftmp0]            \n\t"
@@ -611,7 +616,8 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
-              [h]"+&r"(h)
+              [h]"+&r"(h),
+              [low32]"=&r"(low32)
             : [stride]"r"((mips_reg)stride),[ff_pw_32]"f"(ff_pw_32),
               [A]"f"(A),                    [B]"f"(B),
               [C]"f"(C),                    [D]"f"(D)
@@ -628,10 +634,10 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "mtc1       %[tmp0],    %[ftmp5]                            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[step]             \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[addr0])                      \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[addr0])                      \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
+            "uld        %[low32],   0x00(%[addr0])                      \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
 
             "punpcklbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp4],   %[ftmp2],       %[ftmp0]            \n\t"
@@ -655,7 +661,8 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
-              [h]"+&r"(h)
+              [h]"+&r"(h),
+              [low32]"=&r"(low32)
             : [stride]"r"((mips_reg)stride),[step]"r"((mips_reg)step),
               [ff_pw_32]"f"(ff_pw_32),
               [A]"f"(A),                    [E]"f"(E)
@@ -668,8 +675,8 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "mtc1       %[tmp0],    %[ftmp3]                            \n\t"
             "1:                                                         \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
@@ -681,8 +688,8 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
             "swc1       %[ftmp1],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
 
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_32]         \n\t"
@@ -700,7 +707,8 @@ void ff_avg_h264_chroma_mc4_mmi(uint8_t *dst, uint8_t *src, int stride,
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [tmp0]"=&r"(tmp[0]),
               [dst]"+&r"(dst),              [src]"+&r"(src),
-              [h]"+&r"(h)
+              [h]"+&r"(h),
+              [low32]"=&r"(low32)
             : [stride]"r"((mips_reg)stride),[ff_pw_32]"f"(ff_pw_32),
               [A]"f"(A)
             : "memory"

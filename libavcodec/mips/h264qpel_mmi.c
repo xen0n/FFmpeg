@@ -29,11 +29,12 @@ static inline void copy_block4_mmi(uint8_t *dst, const uint8_t *src,
         int dstStride, int srcStride, int h)
 {
     double ftmp[1];
+    uint64_t low32;
 
     __asm__ volatile (
         "1:                                                             \n\t"
-        "gslwlc1    %[ftmp0],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp0],   0x00(%[src])                            \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp0]                                \n\t"
         "gsswlc1    %[ftmp0],   0x03(%[dst])                            \n\t"
         "gsswrc1    %[ftmp0],   0x00(%[dst])                            \n\t"
         "addi       %[h],       %[h],           -0x01                   \n\t"
@@ -42,7 +43,8 @@ static inline void copy_block4_mmi(uint8_t *dst, const uint8_t *src,
         "bnez       %[h],       1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),
           [dst]"+&r"(dst),                  [src]"+&r"(src),
-          [h]"+&r"(h)
+          [h]"+&r"(h),
+          [low32]"=&r"(low32)
         : [dstStride]"r"((mips_reg)dstStride),
           [srcStride]"r"((mips_reg)srcStride)
         : "memory"
@@ -108,11 +110,12 @@ static inline void put_pixels4_mmi(uint8_t *block, const uint8_t *pixels,
 {
     double ftmp[1];
     uint64_t tmp[1];
+    uint64_t low32;
 
     __asm__ volatile (
         "1:                                                             \n\t"
-        "gslwlc1    %[ftmp0],   0x03(%[pixels])                         \n\t"
-        "gslwrc1    %[ftmp0],   0x00(%[pixels])                         \n\t"
+        "uld        %[low32],   0x00(%[pixels])                         \n\t"
+        "mtc1       %[low32],   %[ftmp0]                                \n\t"
         PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
         "lwl        %[tmp0],    0x03(%[pixels])                         \n\t"
         "lwr        %[tmp0],    0x00(%[pixels])                         \n\t"
@@ -128,7 +131,8 @@ static inline void put_pixels4_mmi(uint8_t *block, const uint8_t *pixels,
         : [ftmp0]"=&f"(ftmp[0]),
           [tmp0]"=&r"(tmp[0]),
           [block]"+&r"(block),              [pixels]"+&r"(pixels),
-          [h]"+&r"(h)
+          [h]"+&r"(h),
+          [low32]"=&r"(low32)
         : [line_size]"r"((mips_reg)line_size)
         : "memory"
     );
@@ -224,19 +228,20 @@ static inline void avg_pixels4_mmi(uint8_t *block, const uint8_t *pixels,
 {
     double ftmp[4];
     mips_reg addr[2];
+    uint64_t low32;
 
     __asm__ volatile (
         "1:                                                             \n\t"
-        "gslwlc1    %[ftmp0],   0x03(%[pixels])                         \n\t"
-        "gslwrc1    %[ftmp0],   0x00(%[pixels])                         \n\t"
-        "gslwlc1    %[ftmp1],   0x03(%[block])                          \n\t"
-        "gslwrc1    %[ftmp1],   0x00(%[block])                          \n\t"
+        "uld        %[low32],   0x00(%[pixels])                         \n\t"
+        "mtc1       %[low32],   %[ftmp0]                                \n\t"
+        "uld        %[low32],   0x00(%[block])                          \n\t"
+        "mtc1       %[low32],   %[ftmp1]                                \n\t"
         PTR_ADDU   "%[addr0],   %[pixels],      %[line_size]            \n\t"
         PTR_ADDU   "%[addr1],   %[block],       %[line_size]            \n\t"
-        "gslwlc1    %[ftmp2],   0x03(%[addr0])                          \n\t"
-        "gslwrc1    %[ftmp2],   0x00(%[addr0])                          \n\t"
-        "gslwlc1    %[ftmp3],   0x03(%[addr1])                          \n\t"
-        "gslwrc1    %[ftmp3],   0x00(%[addr1])                          \n\t"
+        "uld        %[low32],   0x00(%[addr0])                          \n\t"
+        "mtc1       %[low32],   %[ftmp2]                                \n\t"
+        "uld        %[low32],   0x00(%[addr1])                          \n\t"
+        "mtc1       %[low32],   %[ftmp3]                                \n\t"
         "pavgb      %[ftmp0],   %[ftmp0],       %[ftmp1]                \n\t"
         "pavgb      %[ftmp2],   %[ftmp2],       %[ftmp3]                \n\t"
         "gsswlc1    %[ftmp0],   0x03(%[block])                          \n\t"
@@ -251,7 +256,8 @@ static inline void avg_pixels4_mmi(uint8_t *block, const uint8_t *pixels,
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
           [block]"+&r"(block),              [pixels]"+&r"(pixels),
-          [h]"+&r"(h)
+          [h]"+&r"(h),
+          [low32]"=&r"(low32)
         : [line_size]"r"((mips_reg)line_size)
         : "memory"
     );
@@ -457,23 +463,24 @@ static void put_h264_qpel4_h_lowpass_mmi(uint8_t *dst, const uint8_t *src,
 {
     double ftmp[10];
     uint64_t tmp[1];
+    uint64_t low32;
 
     __asm__ volatile (
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "dli        %[tmp0],    0x04                                    \n\t"
         "1:                                                             \n\t"
-        "gslwlc1    %[ftmp1],   0x01(%[src])                            \n\t"
-        "gslwrc1    %[ftmp1],  -0x02(%[src])                            \n\t"
-        "gslwlc1    %[ftmp2],   0x02(%[src])                            \n\t"
-        "gslwrc1    %[ftmp2],  -0x01(%[src])                            \n\t"
-        "gslwlc1    %[ftmp3],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp3],   0x00(%[src])                            \n\t"
-        "gslwlc1    %[ftmp4],   0x04(%[src])                            \n\t"
-        "gslwrc1    %[ftmp4],   0x01(%[src])                            \n\t"
-        "gslwlc1    %[ftmp5],   0x05(%[src])                            \n\t"
-        "gslwrc1    %[ftmp5],   0x02(%[src])                            \n\t"
-        "gslwlc1    %[ftmp6],   0x06(%[src])                            \n\t"
-        "gslwrc1    %[ftmp6],   0x03(%[src])                            \n\t"
+        "uld        %[low32],  -0x02(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp1]                                \n\t"
+        "uld        %[low32],  -0x01(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp2]                                \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp3]                                \n\t"
+        "uld        %[low32],   0x01(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp4]                                \n\t"
+        "uld        %[low32],   0x02(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp5]                                \n\t"
+        "uld        %[low32],   0x03(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp6]                                \n\t"
         "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp0]                \n\t"
@@ -502,7 +509,8 @@ static void put_h264_qpel4_h_lowpass_mmi(uint8_t *dst, const uint8_t *src,
           [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [tmp0]"=&r"(tmp[0]),
-          [dst]"+&r"(dst),                  [src]"+&r"(src)
+          [dst]"+&r"(dst),                  [src]"+&r"(src),
+          [low32]"=&r"(low32)
         : [dstStride]"r"((mips_reg)dstStride),
           [srcStride]"r"((mips_reg)srcStride),
           [ff_pw_20]"f"(ff_pw_20),          [ff_pw_5]"f"(ff_pw_5),
@@ -602,23 +610,24 @@ static void avg_h264_qpel4_h_lowpass_mmi(uint8_t *dst, const uint8_t *src,
 {
     double ftmp[11];
     uint64_t tmp[1];
+    uint64_t low32;
 
     __asm__ volatile (
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "dli        %[tmp0],    0x04                                    \n\t"
         "1:                                                             \n\t"
-        "gslwlc1    %[ftmp1],   0x01(%[src])                            \n\t"
-        "gslwrc1    %[ftmp1],  -0x02(%[src])                            \n\t"
-        "gslwlc1    %[ftmp2],   0x02(%[src])                            \n\t"
-        "gslwrc1    %[ftmp2],  -0x01(%[src])                            \n\t"
-        "gslwlc1    %[ftmp3],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp3],   0x00(%[src])                            \n\t"
-        "gslwlc1    %[ftmp4],   0x04(%[src])                            \n\t"
-        "gslwrc1    %[ftmp4],   0x01(%[src])                            \n\t"
-        "gslwlc1    %[ftmp5],   0x05(%[src])                            \n\t"
-        "gslwrc1    %[ftmp5],   0x02(%[src])                            \n\t"
-        "gslwlc1    %[ftmp6],   0x06(%[src])                            \n\t"
-        "gslwrc1    %[ftmp6],   0x03(%[src])                            \n\t"
+        "uld        %[low32],  -0x02(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp1]                                \n\t"
+        "uld        %[low32],  -0x01(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp2]                                \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp3]                                \n\t"
+        "uld        %[low32],   0x01(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp4]                                \n\t"
+        "uld        %[low32],   0x02(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp5]                                \n\t"
+        "uld        %[low32],   0x03(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp6]                                \n\t"
         "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp0]                \n\t"
@@ -650,7 +659,8 @@ static void avg_h264_qpel4_h_lowpass_mmi(uint8_t *dst, const uint8_t *src,
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [ftmp10]"=&f"(ftmp[10]),
           [tmp0]"=&r"(tmp[0]),
-          [dst]"+&r"(dst),                  [src]"+&r"(src)
+          [dst]"+&r"(dst),                  [src]"+&r"(src),
+          [low32]"=&r"(low32)
         : [dstStride]"r"((mips_reg)dstStride),
           [srcStride]"r"((mips_reg)srcStride),
           [ff_pw_20]"f"(ff_pw_20),          [ff_pw_5]"f"(ff_pw_5),
@@ -751,6 +761,7 @@ static void put_h264_qpel4_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
 {
     double ftmp[12];
     uint64_t tmp[1];
+    uint64_t low32;
 
     src -= 2 * srcStride;
 
@@ -759,31 +770,31 @@ static void put_h264_qpel4_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
         ".set       noreorder                                           \n\t"
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "dli        %[tmp0],    0x02                                    \n\t"
-        "gslwlc1    %[ftmp1],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp1],   0x00(%[src])                            \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp1]                                \n\t"
         "mtc1       %[tmp0],    %[ftmp10]                               \n\t"
         PTR_ADDU   "%[src],     %[src],         %[srcStride]            \n\t"
         "dli        %[tmp0],    0x05                                    \n\t"
-        "gslwlc1    %[ftmp2],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp2],   0x00(%[src])                            \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp2]                                \n\t"
         "mtc1       %[tmp0],    %[ftmp11]                               \n\t"
         PTR_ADDU   "%[src],     %[src],         %[srcStride]            \n\t"
-        "gslwlc1    %[ftmp3],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp3],   0x00(%[src])                            \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp3]                                \n\t"
         PTR_ADDU   "%[src],     %[src],         %[srcStride]            \n\t"
-        "gslwlc1    %[ftmp4],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp4],   0x00(%[src])                            \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp4]                                \n\t"
         PTR_ADDU   "%[src],     %[src],         %[srcStride]            \n\t"
-        "gslwlc1    %[ftmp5],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp5],   0x00(%[src])                            \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp5]                                \n\t"
         PTR_ADDU   "%[src],     %[src],         %[srcStride]            \n\t"
         "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp4],   %[ftmp4],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp5],   %[ftmp5],       %[ftmp0]                \n\t"
-        "gslwlc1    %[ftmp6],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp6],   0x00(%[src])                            \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp6]                                \n\t"
         "paddh      %[ftmp7],   %[ftmp3],       %[ftmp4]                \n\t"
         "psllh      %[ftmp7],   %[ftmp7],       %[ftmp10]               \n\t"
         "psubh      %[ftmp7],   %[ftmp7],       %[ftmp2]                \n\t"
@@ -798,8 +809,8 @@ static void put_h264_qpel4_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
         "packushb   %[ftmp7],   %[ftmp7],       %[ftmp7]                \n\t"
         "swc1       %[ftmp7],   0x00(%[dst])                            \n\t"
         PTR_ADDU   "%[dst],     %[dst],         %[dstStride]            \n\t"
-        "gslwlc1    %[ftmp1],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp1],   0x00(%[src])                            \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp1]                                \n\t"
         "paddh      %[ftmp7],   %[ftmp4],       %[ftmp5]                \n\t"
         "psllh      %[ftmp7],   %[ftmp7],       %[ftmp10]               \n\t"
         "psubh      %[ftmp7],   %[ftmp7],       %[ftmp3]                \n\t"
@@ -814,8 +825,8 @@ static void put_h264_qpel4_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
         "packushb   %[ftmp7],   %[ftmp7],       %[ftmp7]                \n\t"
         "swc1       %[ftmp7],   0x00(%[dst])                            \n\t"
         PTR_ADDU   "%[dst],     %[dst],         %[dstStride]            \n\t"
-        "gslwlc1    %[ftmp2],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp2],   0x00(%[src])                            \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp2]                                \n\t"
         "paddh      %[ftmp7],   %[ftmp5],       %[ftmp6]                \n\t"
         "psllh      %[ftmp7],   %[ftmp7],       %[ftmp10]               \n\t"
         "psubh      %[ftmp7],   %[ftmp7],       %[ftmp4]                \n\t"
@@ -830,8 +841,8 @@ static void put_h264_qpel4_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
         "packushb   %[ftmp7],   %[ftmp7],       %[ftmp7]                \n\t"
         "swc1       %[ftmp7],   0x00(%[dst])                            \n\t"
         PTR_ADDU   "%[dst],     %[dst],         %[dstStride]            \n\t"
-        "gslwlc1    %[ftmp3],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp3],   0x00(%[src])                            \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp3]                                \n\t"
         "paddh      %[ftmp7],   %[ftmp6],       %[ftmp1]                \n\t"
         "psllh      %[ftmp7],   %[ftmp7],       %[ftmp10]               \n\t"
         "psubh      %[ftmp7],   %[ftmp7],       %[ftmp5]                \n\t"
@@ -854,7 +865,8 @@ static void put_h264_qpel4_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [ftmp10]"=&f"(ftmp[10]),          [ftmp11]"=&f"(ftmp[11]),
           [tmp0]"=&r"(tmp[0]),
-          [dst]"+&r"(dst),                  [src]"+&r"(src)
+          [dst]"+&r"(dst),                  [src]"+&r"(src),
+          [low32]"=&r"(low32)
         : [dstStride]"r"((mips_reg)dstStride),
           [srcStride]"r"((mips_reg)srcStride),
           [ff_pw_5]"f"(ff_pw_5),            [ff_pw_16]"f"(ff_pw_16)
@@ -869,6 +881,7 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
     int h = 8;
     double ftmp[10];
     uint64_t tmp[1];
+    uint64_t low32;
 
     src -= 2 * srcStride;
 
@@ -877,29 +890,29 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             ".set       push                                            \n\t"
             ".set       noreorder                                       \n\t"
             "dli        %[tmp0],    0x02                                \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "mtc1       %[tmp0],    %[ftmp8]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "dli        %[tmp0],    0x05                                \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[tmp0],    %[ftmp9]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "xor        %[ftmp7],   %[ftmp7],       %[ftmp7]            \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
-            "gslwlc1    %[ftmp4],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp4],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp7]            \n\t"
             "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp7]            \n\t"
-            "gslwlc1    %[ftmp5],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp5],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp5]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp2],       %[ftmp3]            \n\t"
             "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp7]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
@@ -917,9 +930,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "packushb   %[ftmp6],   %[ftmp6],       %[ftmp6]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
             "punpcklbh  %[ftmp0],   %[ftmp0],       %[ftmp7]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
@@ -934,9 +947,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp4],       %[ftmp5]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
             "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp7]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
@@ -951,9 +964,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp5],       %[ftmp0]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -967,9 +980,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp0],       %[ftmp1]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp5]            \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
             "punpcklbh  %[ftmp3] ,  %[ftmp3],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -983,9 +996,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp1],       %[ftmp2]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp4],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
-            "gslwrc1    %[ftmp4],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
             "punpcklbh  %[ftmp4],   %[ftmp4],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -999,9 +1012,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp2],       %[ftmp3]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp5],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp5]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
-            "gslwrc1    %[ftmp5],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
             "punpcklbh  %[ftmp5],   %[ftmp5],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -1015,9 +1028,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp5]            \n\t"
             "punpcklbh  %[ftmp0],   %[ftmp0],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -1031,9 +1044,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "bne        %[h],       0x10,           2f                  \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp4],       %[ftmp5]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
             "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp7]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
@@ -1048,9 +1061,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp5],       %[ftmp0]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -1064,9 +1077,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp0],       %[ftmp1]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp5]            \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
             "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -1080,9 +1093,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp1],       %[ftmp2]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp4],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
-            "gslwrc1    %[ftmp4],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
             "punpcklbh  %[ftmp4],   %[ftmp4],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -1096,9 +1109,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp2],       %[ftmp3]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp5],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp5]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
-            "gslwrc1    %[ftmp5],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
             "punpcklbh  %[ftmp5],   %[ftmp5],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -1112,9 +1125,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp5]            \n\t"
             "punpcklbh  %[ftmp0],   %[ftmp0],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -1128,9 +1141,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp4],       %[ftmp5]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -1144,9 +1157,9 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "paddh      %[ftmp6],   %[ftmp5],       %[ftmp0]            \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp8]            \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp7]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp6],       %[ff_pw_5]          \n\t"
@@ -1167,7 +1180,8 @@ static void put_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
               [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
               [tmp0]"=&r"(tmp[0]),
               [src]"+&r"(src),              [dst]"+&r"(dst),
-              [h]"+&r"(h)
+              [h]"+&r"(h),
+              [low32]"=&r"(low32)
             : [dstStride]"r"((mips_reg)dstStride),
               [srcStride]"r"((mips_reg)srcStride),
               [ff_pw_5]"f"(ff_pw_5),        [ff_pw_16]"f"(ff_pw_16)
@@ -1311,6 +1325,7 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
     int h = 8;
     double ftmp[10];
     uint64_t tmp[1];
+    uint64_t low32;
 
     src -= 2 * srcStride;
 
@@ -1322,29 +1337,29 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "xor        %[ftmp7],   %[ftmp7],       %[ftmp7]            \n\t"
             "mtc1       %[tmp0],    %[ftmp9]                            \n\t"
             "dli        %[tmp0],    0x05                                \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "mtc1       %[tmp0],    %[ftmp8]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
-            "gslwlc1    %[ftmp4],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp4],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "punpcklbh  %[ftmp0],   %[ftmp0],       %[ftmp7]            \n\t"
             "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp7]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp7]            \n\t"
             "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp7]            \n\t"
             "punpcklbh  %[ftmp4],   %[ftmp4],       %[ftmp7]            \n\t"
-            "gslwlc1    %[ftmp5],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp5],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp5]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp2],       %[ftmp3]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
@@ -1361,8 +1376,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
@@ -1379,8 +1394,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp4],       %[ftmp5]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
@@ -1397,8 +1412,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp5],       %[ftmp0]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
@@ -1415,8 +1430,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp0],       %[ftmp1]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp5]            \n\t"
@@ -1433,8 +1448,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp4],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp4],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp1],       %[ftmp2]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
@@ -1451,8 +1466,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp5]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp5],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp5],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp5]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp2],       %[ftmp3]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
@@ -1469,8 +1484,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
@@ -1488,8 +1503,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             "bne        %[h],       0x10,           2f                  \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp4],       %[ftmp5]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
@@ -1506,8 +1521,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp5],       %[ftmp0]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
@@ -1524,8 +1539,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp0],       %[ftmp1]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp5]            \n\t"
@@ -1542,8 +1557,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp4],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp4],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp1],       %[ftmp2]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
@@ -1560,8 +1575,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp5]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp5],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp5],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp5]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp2],       %[ftmp3]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
@@ -1578,8 +1593,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
@@ -1596,8 +1611,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp4],       %[ftmp5]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
@@ -1614,8 +1629,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
             "pavgb      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
             "swc1       %[ftmp6],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[dstStride]        \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp5],       %[ftmp0]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp9]            \n\t"
             "psubh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
@@ -1641,7 +1656,8 @@ static void avg_h264_qpel8_v_lowpass_mmi(uint8_t *dst, const uint8_t *src,
               [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
               [tmp0]"=&r"(tmp[0]),
               [src]"+&r"(src),              [dst]"+&r"(dst),
-              [h]"+&r"(h)
+              [h]"+&r"(h),
+              [low32]"=&r"(low32)
             : [dstStride]"r"((mips_reg)dstStride),
               [srcStride]"r"((mips_reg)srcStride),
               [ff_pw_5]"f"(ff_pw_5),        [ff_pw_16]"f"(ff_pw_16)
@@ -1673,6 +1689,7 @@ static void put_h264_qpel4_hv_lowpass_mmi(uint8_t *dst, const uint8_t *src,
     int16_t *tmp = _tmp;
     double ftmp[10];
     uint64_t tmp0;
+    uint64_t low32;
 
     src -= 2*srcStride;
 
@@ -1680,18 +1697,18 @@ static void put_h264_qpel4_hv_lowpass_mmi(uint8_t *dst, const uint8_t *src,
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "dli        %[tmp0],    0x09                                    \n\t"
         "1:                                                             \n\t"
-        "gslwlc1    %[ftmp1],   0x01(%[src])                            \n\t"
-        "gslwrc1    %[ftmp1],  -0x02(%[src])                            \n\t"
-        "gslwlc1    %[ftmp2],   0x02(%[src])                            \n\t"
-        "gslwrc1    %[ftmp2],  -0x01(%[src])                            \n\t"
-        "gslwlc1    %[ftmp3],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp3],   0x00(%[src])                            \n\t"
-        "gslwlc1    %[ftmp4],   0x04(%[src])                            \n\t"
-        "gslwrc1    %[ftmp4],   0x01(%[src])                            \n\t"
-        "gslwlc1    %[ftmp5],   0x05(%[src])                            \n\t"
-        "gslwrc1    %[ftmp5],   0x02(%[src])                            \n\t"
-        "gslwlc1    %[ftmp6],   0x06(%[src])                            \n\t"
-        "gslwrc1    %[ftmp6],   0x03(%[src])                            \n\t"
+        "uld        %[low32],  -0x02(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp1]                                \n\t"
+        "uld        %[low32],  -0x01(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp2]                                \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp3]                                \n\t"
+        "uld        %[low32],   0x01(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp4]                                \n\t"
+        "uld        %[low32],   0x02(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp5]                                \n\t"
+        "uld        %[low32],   0x03(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp6]                                \n\t"
         "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp0]                \n\t"
@@ -1716,7 +1733,8 @@ static void put_h264_qpel4_hv_lowpass_mmi(uint8_t *dst, const uint8_t *src,
           [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [tmp0]"=&r"(tmp0),
-          [tmp]"+&r"(tmp),                  [src]"+&r"(src)
+          [tmp]"+&r"(tmp),                  [src]"+&r"(src),
+          [low32]"=&r"(low32)
         : [tmpStride]"r"(8),
           [srcStride]"r"((mips_reg)srcStride),
           [ff_pw_20]"f"(ff_pw_20),          [ff_pw_5]"f"(ff_pw_5)
@@ -1750,36 +1768,37 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
     int w = (size + 8) >> 2;
     double ftmp[11];
     uint64_t tmp0;
+    uint64_t low32;
 
     src -= 2 * srcStride + 2;
 
     while (w--) {
         __asm__ volatile (
             "dli        %[tmp0],    0x02                                \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "mtc1       %[tmp0],    %[ftmp10]                           \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "xor        %[ftmp7],   %[ftmp7],       %[ftmp7]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
-            "gslwlc1    %[ftmp4],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp4],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "punpcklbh  %[ftmp0],   %[ftmp0],       %[ftmp7]            \n\t"
             "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp7]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp7]            \n\t"
             "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp7]            \n\t"
             "punpcklbh  %[ftmp4],   %[ftmp4],       %[ftmp7]            \n\t"
-            "gslwlc1    %[ftmp5],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp5],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp5]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp2],       %[ftmp3]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp0],   %[ftmp0],       %[ff_pw_16]         \n\t"
@@ -1791,8 +1810,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
             "sdc1       %[ftmp6],   0x00(%[tmp])                        \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_16]         \n\t"
@@ -1804,8 +1823,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
             "sdc1       %[ftmp6],   0x30(%[tmp])                        \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp4],       %[ftmp5]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_16]         \n\t"
@@ -1817,8 +1836,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
             "sdc1       %[ftmp6],   0x60(%[tmp])                        \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp5],       %[ftmp0]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp3],   %[ftmp3],       %[ff_pw_16]         \n\t"
@@ -1830,8 +1849,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
             "sdc1       %[ftmp6],   0x90(%[tmp])                        \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp0],       %[ftmp1]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp4],   %[ftmp4],       %[ff_pw_16]         \n\t"
@@ -1843,8 +1862,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
             "sdc1       %[ftmp6],   0xc0(%[tmp])                        \n\t"
-            "gslwlc1    %[ftmp4],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp4],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp1],       %[ftmp2]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp5],   %[ftmp5],       %[ff_pw_16]         \n\t"
@@ -1856,8 +1875,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp5]            \n\t"
             "sdc1       %[ftmp6],   0xf0(%[tmp])                        \n\t"
-            "gslwlc1    %[ftmp5],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp5],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp5]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp2],       %[ftmp3]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp0],   %[ftmp0],       %[ff_pw_16]         \n\t"
@@ -1869,8 +1888,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
             "sdc1       %[ftmp6],   0x120(%[tmp])                       \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_16]         \n\t"
@@ -1883,8 +1902,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
             "bne        %[size],    0x10,           2f                  \n\t"
             "sdc1       %[ftmp6],   0x150(%[tmp])                       \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp4],       %[ftmp5]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_16]         \n\t"
@@ -1896,8 +1915,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
             "sdc1       %[ftmp6],   0x180(%[tmp])                       \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp5],       %[ftmp0]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp3],   %[ftmp3],       %[ff_pw_16]         \n\t"
@@ -1909,8 +1928,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
             "sdc1       %[ftmp6],   0x1b0(%[tmp])                       \n\t"
-            "gslwlc1    %[ftmp3],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp3],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp3]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp0],       %[ftmp1]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp4],   %[ftmp4],       %[ff_pw_16]         \n\t"
@@ -1922,8 +1941,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
             "sdc1       %[ftmp6],   0x1e0(%[tmp])                       \n\t"
-            "gslwlc1    %[ftmp4],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp4],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp4]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp1],       %[ftmp2]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp5],   %[ftmp5],       %[ff_pw_16]         \n\t"
@@ -1935,8 +1954,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp5]            \n\t"
             "sdc1       %[ftmp6],   0x210(%[tmp])                       \n\t"
-            "gslwlc1    %[ftmp5],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp5],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp5]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp2],       %[ftmp3]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp0],   %[ftmp0],       %[ff_pw_16]         \n\t"
@@ -1948,8 +1967,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp0]            \n\t"
             "sdc1       %[ftmp6],   0x240(%[tmp])                       \n\t"
-            "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp0]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp1],   %[ftmp1],       %[ff_pw_16]         \n\t"
@@ -1961,8 +1980,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp1]            \n\t"
             "sdc1       %[ftmp6],   0x270(%[tmp])                       \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp4],       %[ftmp5]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp2],   %[ftmp2],       %[ff_pw_16]         \n\t"
@@ -1974,8 +1993,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
             PTR_ADDU   "%[src],     %[src],         %[srcStride]        \n\t"
             "paddh      %[ftmp6],   %[ftmp6],       %[ftmp2]            \n\t"
             "sdc1       %[ftmp6],   0x2a0(%[tmp])                       \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src])                        \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "paddh      %[ftmp6],   %[ftmp5],       %[ftmp0]            \n\t"
             "psllh      %[ftmp6],   %[ftmp6],       %[ftmp10]           \n\t"
             "paddh      %[ftmp3],   %[ftmp3],       %[ff_pw_16]         \n\t"
@@ -1995,7 +2014,8 @@ static inline void put_h264_qpel8or16_hv1_lowpass_mmi(int16_t *tmp,
               [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
               [ftmp10]"=&f"(ftmp[10]),
               [tmp0]"=&r"(tmp0),
-              [src]"+&r"(src)
+              [src]"+&r"(src),
+              [low32]"=&r"(low32)
             : [tmp]"r"(tmp),                [size]"r"(size),
               [srcStride]"r"((mips_reg)srcStride),
               [ff_pw_5]"f"(ff_pw_5),        [ff_pw_16]"f"(ff_pw_16)
@@ -2114,6 +2134,7 @@ static void put_h264_qpel8_h_lowpass_l2_mmi(uint8_t *dst, const uint8_t *src,
     int h = 8;
     double ftmp[9];
     uint64_t tmp[1];
+    uint64_t low32;
 
     __asm__ volatile (
         "dli        %[tmp0],    0x02                                    \n\t"
@@ -2148,10 +2169,10 @@ static void put_h264_qpel8_h_lowpass_l2_mmi(uint8_t *dst, const uint8_t *src,
         "psubh      %[ftmp1],   %[ftmp1],       %[ftmp3]                \n\t"
         "pmullh     %[ftmp2],   %[ftmp2],       %[ff_pw_5]              \n\t"
         "pmullh     %[ftmp1],   %[ftmp1],       %[ff_pw_5]              \n\t"
-        "gslwlc1    %[ftmp3],   0x01(%[src])                            \n\t"
-        "gslwrc1    %[ftmp3],  -0x02(%[src])                            \n\t"
-        "gslwlc1    %[ftmp6],   0x0a(%[src])                            \n\t"
-        "gslwrc1    %[ftmp6],   0x07(%[src])                            \n\t"
+        "uld        %[low32],  -0x02(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp3]                                \n\t"
+        "uld        %[low32],   0x07(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp6]                                \n\t"
         "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp6],   %[ftmp6],       %[ftmp0]                \n\t"
         "paddh      %[ftmp3],   %[ftmp3],       %[ftmp4]                \n\t"
@@ -2179,7 +2200,8 @@ static void put_h264_qpel8_h_lowpass_l2_mmi(uint8_t *dst, const uint8_t *src,
           [ftmp8]"=&f"(ftmp[8]),
           [tmp0]"=&r"(tmp[0]),
           [src]"+&r"(src),                  [dst]"+&r"(dst),
-          [src2]"+&r"(src2),                [h]"+&r"(h)
+          [src2]"+&r"(src2),                [h]"+&r"(h),
+          [low32]"=&r"(low32)
         : [src2Stride]"r"((mips_reg)src2Stride),
           [dstStride]"r"((mips_reg)dstStride),
           [ff_pw_5]"f"(ff_pw_5),            [ff_pw_16]"f"(ff_pw_16)
@@ -2268,6 +2290,7 @@ static void avg_h264_qpel4_hv_lowpass_mmi(uint8_t *dst, const uint8_t *src,
     int16_t *tmp = _tmp;
     double ftmp[10];
     uint64_t tmp0;
+    uint64_t low32;
 
     src -= 2*srcStride;
 
@@ -2275,18 +2298,18 @@ static void avg_h264_qpel4_hv_lowpass_mmi(uint8_t *dst, const uint8_t *src,
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "dli        %[tmp0],    0x09                                    \n\t"
         "1:                                                             \n\t"
-        "gslwlc1    %[ftmp1],   0x01(%[src])                            \n\t"
-        "gslwrc1    %[ftmp1],  -0x02(%[src])                            \n\t"
-        "gslwlc1    %[ftmp2],   0x02(%[src])                            \n\t"
-        "gslwrc1    %[ftmp2],  -0x01(%[src])                            \n\t"
-        "gslwlc1    %[ftmp3],   0x03(%[src])                            \n\t"
-        "gslwrc1    %[ftmp3],   0x00(%[src])                            \n\t"
-        "gslwlc1    %[ftmp4],   0x04(%[src])                            \n\t"
-        "gslwrc1    %[ftmp4],   0x01(%[src])                            \n\t"
-        "gslwlc1    %[ftmp5],   0x05(%[src])                            \n\t"
-        "gslwrc1    %[ftmp5],   0x02(%[src])                            \n\t"
-        "gslwlc1    %[ftmp6],   0x06(%[src])                            \n\t"
-        "gslwrc1    %[ftmp6],   0x03(%[src])                            \n\t"
+        "uld        %[low32],  -0x02(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp1]                                \n\t"
+        "uld        %[low32],  -0x01(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp2]                                \n\t"
+        "uld        %[low32],   0x00(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp3]                                \n\t"
+        "uld        %[low32],   0x01(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp4]                                \n\t"
+        "uld        %[low32],   0x02(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp5]                                \n\t"
+        "uld        %[low32],   0x03(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp6]                                \n\t"
         "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp0]                \n\t"
@@ -2311,7 +2334,8 @@ static void avg_h264_qpel4_hv_lowpass_mmi(uint8_t *dst, const uint8_t *src,
           [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [tmp0]"=&r"(tmp0),
-          [tmp]"+&r"(tmp),                  [src]"+&r"(src)
+          [tmp]"+&r"(tmp),                  [src]"+&r"(src),
+          [low32]"=&r"(low32)
         : [tmpStride]"r"(8),
           [srcStride]"r"((mips_reg)srcStride),
           [ff_pw_20]"f"(ff_pw_20),          [ff_pw_5]"f"(ff_pw_5)
@@ -2446,6 +2470,7 @@ static void avg_h264_qpel8_h_lowpass_l2_mmi(uint8_t *dst, const uint8_t *src,
 {
     double ftmp[10];
     uint64_t tmp[2];
+    uint64_t low32;
 
     __asm__ volatile (
         "dli        %[tmp1],    0x02                                    \n\t"
@@ -2481,10 +2506,10 @@ static void avg_h264_qpel8_h_lowpass_l2_mmi(uint8_t *dst, const uint8_t *src,
         "psubh      %[ftmp3],   %[ftmp3],       %[ftmp6]                \n\t"
         "pmullh     %[ftmp1],   %[ftmp1],       %[ff_pw_5]              \n\t"
         "pmullh     %[ftmp3],   %[ftmp3],       %[ff_pw_5]              \n\t"
-        "gslwlc1    %[ftmp2],   0x01(%[src])                            \n\t"
-        "gslwrc1    %[ftmp2],  -0x02(%[src])                            \n\t"
-        "gslwlc1    %[ftmp6],   0x0a(%[src])                            \n\t"
-        "gslwrc1    %[ftmp6],   0x07(%[src])                            \n\t"
+        "uld        %[low32],  -0x02(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp2]                                \n\t"
+        "uld        %[low32],   0x07(%[src])                            \n\t"
+        "mtc1       %[low32],   %[ftmp6]                                \n\t"
         "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp6],   %[ftmp6],       %[ftmp0]                \n\t"
         "paddh      %[ftmp2],   %[ftmp2],       %[ftmp4]                \n\t"
@@ -2514,7 +2539,8 @@ static void avg_h264_qpel8_h_lowpass_l2_mmi(uint8_t *dst, const uint8_t *src,
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [tmp0]"=&r"(tmp[0]),              [tmp1]"=&r"(tmp[1]),
           [dst]"+&r"(dst),                  [src]"+&r"(src),
-          [src2]"+&r"(src2)
+          [src2]"+&r"(src2),
+          [low32]"=&r"(low32)
         : [dstStride]"r"((mips_reg)dstStride),
           [src2Stride]"r"((mips_reg)src2Stride),
           [ff_pw_5]"f"(ff_pw_5),            [ff_pw_16]"f"(ff_pw_16)

@@ -405,6 +405,7 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
     DECLARE_ALIGNED(8, const uint64_t, ff_ph_35468) = {0x8a8c8a8c8a8c8a8cULL};
     double ftmp[15];
     uint64_t tmp[1];
+    uint64_t low32;
 
     __asm__ volatile (
         /*
@@ -581,14 +582,14 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "psrah      %[ftmp13],  %[ftmp13],      %[ftmp0]                \n\t"
 
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
-        "gslwlc1    %[ftmp1],   0x03(%[dst0])                           \n\t"
-        "gslwrc1    %[ftmp1],   0x00(%[dst0])                           \n\t"
-        "gslwlc1    %[ftmp2],   0x03(%[dst1])                           \n\t"
-        "gslwrc1    %[ftmp2],   0x00(%[dst1])                           \n\t"
-        "gslwlc1    %[ftmp3],   0x03(%[dst2])                           \n\t"
-        "gslwrc1    %[ftmp3],   0x00(%[dst2])                           \n\t"
-        "gslwlc1    %[ftmp4],   0x03(%[dst3])                           \n\t"
-        "gslwrc1    %[ftmp4],   0x00(%[dst3])                           \n\t"
+        "uld        %[low32],   0x00(%[dst0])                           \n\t"
+        "mtc1       %[low32],   %[ftmp1]                                \n\t"
+        "uld        %[low32],   0x00(%[dst1])                           \n\t"
+        "mtc1       %[low32],   %[ftmp2]                                \n\t"
+        "uld        %[low32],   0x00(%[dst2])                           \n\t"
+        "mtc1       %[low32],   %[ftmp3]                                \n\t"
+        "uld        %[low32],   0x00(%[dst3])                           \n\t"
+        "mtc1       %[low32],   %[ftmp4]                                \n\t"
         "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp0]                \n\t"
@@ -627,7 +628,8 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
           [ftmp10]"=&f"(ftmp[10]),          [ftmp11]"=&f"(ftmp[11]),
           [ftmp12]"=&f"(ftmp[12]),          [ftmp13]"=&f"(ftmp[13]),
           [ftmp14]"=&f"(ftmp[14]),
-          [tmp0]"=&r"(tmp[0])
+          [tmp0]"=&r"(tmp[0]),
+          [low32]"=&r"(low32)
         : [dst0]"r"(dst),                   [dst1]"r"(dst+stride),
           [dst2]"r"(dst+2*stride),          [dst3]"r"(dst+3*stride),
           [block]"r"(block),                [ff_pw_4]"f"(ff_pw_4),
@@ -674,20 +676,21 @@ void ff_vp8_idct_dc_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
 #if OK
     int dc = (block[0] + 4) >> 3;
     double ftmp[6];
+    uint64_t low32;
 
     block[0] = 0;
 
     __asm__ volatile (
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]             \n\t"
         "mtc1       %[dc],      %[ftmp5]                             \n\t"
-        "gslwlc1    %[ftmp1],   0x03(%[dst0])                        \n\t"
-        "gslwrc1    %[ftmp1],   0x00(%[dst0])                        \n\t"
-        "gslwlc1    %[ftmp2],   0x03(%[dst1])                        \n\t"
-        "gslwrc1    %[ftmp2],   0x00(%[dst1])                        \n\t"
-        "gslwlc1    %[ftmp3],   0x03(%[dst2])                        \n\t"
-        "gslwrc1    %[ftmp3],   0x00(%[dst2])                        \n\t"
-        "gslwlc1    %[ftmp4],   0x03(%[dst3])                        \n\t"
-        "gslwrc1    %[ftmp4],   0x00(%[dst3])                        \n\t"
+        "uld        %[low32],   0x00(%[dst0])                        \n\t"
+        "mtc1       %[low32],   %[ftmp1]                             \n\t"
+        "uld        %[low32],   0x00(%[dst1])                        \n\t"
+        "mtc1       %[low32],   %[ftmp2]                             \n\t"
+        "uld        %[low32],   0x00(%[dst2])                        \n\t"
+        "mtc1       %[low32],   %[ftmp3]                             \n\t"
+        "uld        %[low32],   0x00(%[dst3])                        \n\t"
+        "mtc1       %[low32],   %[ftmp4]                             \n\t"
         "pshufh     %[ftmp5],   %[ftmp5],       %[ftmp0]             \n\t"
         "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]             \n\t"
         "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp0]             \n\t"
@@ -711,7 +714,8 @@ void ff_vp8_idct_dc_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "gsswrc1    %[ftmp4],   0x00(%[dst3])                        \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
-          [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5])
+          [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
+          [low32]"=&r"(low32)
         : [dst0]"r"(dst),                   [dst1]"r"(dst+stride),
           [dst2]"r"(dst+2*stride),          [dst3]"r"(dst+3*stride),
           [dc]"r"(dc)
@@ -952,12 +956,13 @@ void ff_put_vp8_pixels4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     double ftmp[1];
     uint64_t tmp[1];
     mips_reg addr[2];
+    uint64_t low32;
 
     __asm__ volatile (
         "1:                                                         \n\t"
         PTR_ADDU   "%[addr0],   %[src],         %[srcstride]        \n\t"
-        "gslwlc1    %[ftmp0],   0x03(%[src])                        \n\t"
-        "gslwrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+        "uld        %[low32],   0x00(%[src])                        \n\t"
+        "mtc1       %[low32],   %[ftmp0]                            \n\t"
         "lwl        %[tmp0],    0x03(%[addr0])                      \n\t"
         "lwr        %[tmp0],    0x00(%[addr0])                      \n\t"
         PTR_ADDU   "%[addr1],   %[dst],         %[dststride]        \n\t"
@@ -972,7 +977,8 @@ void ff_put_vp8_pixels4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         : [ftmp0]"=&f"(ftmp[0]),            [tmp0]"=&r"(tmp[0]),
           [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
           [dst]"+&r"(dst),                  [src]"+&r"(src),
-          [h]"+&r"(h)
+          [h]"+&r"(h),
+          [low32]"=&r"(low32)
         : [dststride]"r"((mips_reg)dststride),
           [srcstride]"r"((mips_reg)srcstride)
         : "memory"
@@ -1258,6 +1264,7 @@ void ff_put_vp8_epel4_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[5];
     uint64_t tmp[1];
+    uint64_t low32;
 
     for (y = 0; y < h; y++) {
         /*
@@ -1268,32 +1275,32 @@ void ff_put_vp8_epel4_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x02(%[src])                        \n\t"
+            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x04(%[src])                        \n\t"
+            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x05(%[src])                        \n\t"
+            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -1310,7 +1317,8 @@ void ff_put_vp8_epel4_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [low32]"=&r"(low32)
             : [dst]"r"(dst),                    [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),          [filter2]"r"(filter[2]),
@@ -1657,6 +1665,7 @@ void ff_put_vp8_epel4_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[6];
     uint64_t tmp[1];
+    uint64_t low32;
 
     for (y = 0; y < h; y++) {
         /*
@@ -1667,48 +1676,48 @@ void ff_put_vp8_epel4_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x02(%[src])                        \n\t"
+            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x01(%[src])                        \n\t"
+            "uld        %[low32],  -0x02(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x02(%[src])                        \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x04(%[src])                        \n\t"
+            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x05(%[src])                        \n\t"
+            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x06(%[src])                        \n\t"
+            "uld        %[low32],   0x03(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x03(%[src])                        \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
@@ -1725,7 +1734,8 @@ void ff_put_vp8_epel4_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [low32]"=&r"(low32)
             : [dst]"r"(dst),                    [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),          [filter1]"r"(filter[1]),
@@ -2009,6 +2019,7 @@ void ff_put_vp8_epel4_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[6];
     uint64_t tmp[1];
+    uint64_t low32;
 
     for (y = 0; y < h; y++) {
         /*
@@ -2019,32 +2030,32 @@ void ff_put_vp8_epel4_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src0])                       \n\t"
+            "uld        %[low32],   0x00(%[src0])                       \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src0])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x03(%[src1])                       \n\t"
+            "uld        %[low32],   0x00(%[src1])                       \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src1])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x03(%[src2])                       \n\t"
+            "uld        %[low32],   0x00(%[src2])                       \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src2])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x03(%[src3])                       \n\t"
+            "uld        %[low32],   0x00(%[src3])                       \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src3])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -2061,7 +2072,8 @@ void ff_put_vp8_epel4_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [low32]"=&r"(low32)
             : [dst]"r"(dst),                    [src0]"r"(src),
               [src1]"r"(src-srcstride),         [src2]"r"(src+srcstride),
               [src3]"r"(src+2*srcstride),       [ff_pw_64]"f"(ff_pw_64),
@@ -2414,6 +2426,7 @@ void ff_put_vp8_epel4_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[5];
     uint64_t tmp[1];
+    uint64_t low32;
 
     for (y = 0; y < h; y++) {
         /*
@@ -2424,48 +2437,48 @@ void ff_put_vp8_epel4_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src0])                       \n\t"
+            "uld        %[low32],   0x00(%[src0])                       \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src0])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x03(%[src1])                       \n\t"
+            "uld        %[low32],   0x00(%[src1])                       \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src1])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x03(%[src2])                       \n\t"
+            "uld        %[low32],   0x00(%[src2])                       \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src2])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x03(%[src3])                       \n\t"
+            "uld        %[low32],   0x00(%[src3])                       \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src3])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x03(%[src4])                       \n\t"
+            "uld        %[low32],   0x00(%[src4])                       \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src4])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x03(%[src5])                       \n\t"
+            "uld        %[low32],   0x00(%[src5])                       \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src5])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -2482,7 +2495,8 @@ void ff_put_vp8_epel4_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [low32]"=&r"(low32)
             : [dst]"r"(dst),                    [src0]"r"(src),
               [src1]"r"(src-srcstride),         [src2]"r"(src-2*srcstride),
               [src3]"r"(src+srcstride),         [src4]"r"(src+2*srcstride),
@@ -3012,6 +3026,7 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[5];
     uint64_t tmp0;
+    uint64_t low32;
 
     src -= srcstride;
 
@@ -3024,32 +3039,32 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x02(%[src])                        \n\t"
+            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x04(%[src])                        \n\t"
+            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x05(%[src])                        \n\t"
+            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -3066,7 +3081,8 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [low32]"=&r"(low32)
             : [tmp]"r"(tmp),                    [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),          [filter2]"r"(filter[2]),
@@ -3107,32 +3123,32 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[tmp])                        \n\t"
+            "uld        %[low32],   0x00(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],  -0x01(%[tmp])                        \n\t"
+            "uld        %[low32],  -0x04(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x04(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
+            "uld        %[low32],   0x04(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x04(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x0b(%[tmp])                        \n\t"
+            "uld        %[low32],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x08(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -3149,7 +3165,8 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [low32]"=&r"(low32)
             : [dst]"r"(dst),                    [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),          [filter2]"r"(filter[2]),
@@ -3739,6 +3756,7 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[5];
     uint64_t tmp0;
+    uint64_t low32;
 
     src -= 2 * srcstride;
 
@@ -3751,32 +3769,32 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x02(%[src])                        \n\t"
+            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x04(%[src])                        \n\t"
+            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x05(%[src])                        \n\t"
+            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -3793,7 +3811,8 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [low32]"=&r"(low32)
             : [tmp]"r"(tmp),                [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),      [filter2]"r"(filter[2]),
@@ -3834,48 +3853,48 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[tmp])                        \n\t"
+            "uld        %[low32],   0x00(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],  -0x01(%[tmp])                        \n\t"
+            "uld        %[low32],  -0x04(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x04(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],  -0x05(%[tmp])                        \n\t"
+            "uld        %[low32],  -0x08(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x08(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
+            "uld        %[low32],   0x04(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x04(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x0b(%[tmp])                        \n\t"
+            "uld        %[low32],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x08(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x0f(%[tmp])                        \n\t"
+            "uld        %[low32],   0x0c(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x0c(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -3892,7 +3911,8 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [low32]"=&r"(low32)
             : [dst]"r"(dst),                [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -4483,6 +4503,7 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[7];
     uint64_t tmp0;
+    uint64_t low32;
 
     src -= srcstride;
 
@@ -4495,48 +4516,48 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x02(%[src])                        \n\t"
+            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x01(%[src])                        \n\t"
+            "uld        %[low32],  -0x02(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x02(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x04(%[src])                        \n\t"
+            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x05(%[src])                        \n\t"
+            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x06(%[src])                        \n\t"
+            "uld        %[low32],   0x03(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x03(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -4553,7 +4574,8 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [low32]"=&r"(low32)
             : [tmp]"r"(tmp),                [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -4595,32 +4617,32 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[tmp])                        \n\t"
+            "uld        %[low32],   0x00(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],  -0x01(%[tmp])                        \n\t"
+            "uld        %[low32],  -0x04(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x04(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
+            "uld        %[low32],   0x04(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x04(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x0b(%[tmp])                        \n\t"
+            "uld        %[low32],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x08(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -4638,7 +4660,8 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [low32]"=&r"(low32)
             : [dst]"r"(dst),                [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),      [filter2]"r"(filter[2]),
@@ -5294,6 +5317,7 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[5];
     uint64_t tmp0;
+    uint64_t low32;
 
     src -= 2 * srcstride;
 
@@ -5306,48 +5330,48 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x02(%[src])                        \n\t"
+            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x01(%[src])                        \n\t"
+            "uld        %[low32],  -0x02(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x02(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x04(%[src])                        \n\t"
+            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x05(%[src])                        \n\t"
+            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x06(%[src])                        \n\t"
+            "uld        %[low32],   0x03(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x03(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -5364,7 +5388,8 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [low32]"=&r"(low32)
             : [tmp]"r"(tmp),                [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -5406,48 +5431,48 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[tmp])                        \n\t"
+            "uld        %[low32],   0x00(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "gslwlc1    %[ftmp1],  -0x01(%[tmp])                        \n\t"
+            "uld        %[low32],  -0x04(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x04(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],  -0x05(%[tmp])                        \n\t"
+            "uld        %[low32],  -0x08(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],  -0x08(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
+            "uld        %[low32],   0x04(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x04(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x0b(%[tmp])                        \n\t"
+            "uld        %[low32],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x08(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "gslwlc1    %[ftmp1],   0x0f(%[tmp])                        \n\t"
+            "uld        %[low32],   0x0c(%[tmp])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x0c(%[tmp])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
@@ -5464,7 +5489,8 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [low32]"=&r"(low32)
             : [dst]"r"(dst),                [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -6219,6 +6245,7 @@ void ff_put_vp8_bilinear4_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     int a = 8 - mx, b = mx;
     int y;
     double ftmp[5];
+    uint64_t low32;
 
     for (y = 0; y < h; y++) {
         /*
@@ -6229,12 +6256,12 @@ void ff_put_vp8_bilinear4_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[a],       %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
-            "gslwlc1    %[ftmp2],   0x04(%[src])                        \n\t"
+            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "mtc1       %[b],       %[ftmp4]                            \n\t"
-            "gslwrc1    %[ftmp2],   0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -6250,7 +6277,8 @@ void ff_put_vp8_bilinear4_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [dst]"+&r"(dst)
+              [dst]"+&r"(dst),
+              [low32]"=&r"(low32)
             : [src]"r"(src),                [a]"r"(a),
               [b]"r"(b),
               [ff_pw_4]"f"(ff_pw_4),        [ff_pw_3]"f"(ff_pw_3)
@@ -6280,6 +6308,7 @@ void ff_put_vp8_bilinear4_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     int c = 8 - my, d = my;
     int y;
     double ftmp[5];
+    uint64_t low32;
 
     for (y = 0; y < h; y++) {
         /*
@@ -6290,12 +6319,12 @@ void ff_put_vp8_bilinear4_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src1])                       \n\t"
+            "uld        %[low32],   0x00(%[src1])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[c],       %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src1])                       \n\t"
-            "gslwlc1    %[ftmp2],   0x03(%[src2])                       \n\t"
+            "uld        %[low32],   0x00(%[src2])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "mtc1       %[d],       %[ftmp4]                            \n\t"
-            "gslwrc1    %[ftmp2],   0x00(%[src2])                       \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -6311,7 +6340,8 @@ void ff_put_vp8_bilinear4_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [dst]"+&r"(dst)
+              [dst]"+&r"(dst),
+              [low32]"=&r"(low32)
             : [src1]"r"(src),               [src2]"r"(src+sstride),
               [c]"r"(c),                    [d]"r"(d),
               [ff_pw_4]"f"(ff_pw_4),        [ff_pw_3]"f"(ff_pw_3)
@@ -6344,6 +6374,7 @@ void ff_put_vp8_bilinear4_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     uint8_t tmp_array[36];
     uint8_t *tmp = tmp_array;
     double ftmp[5];
+    uint64_t low32;
 
     for (y = 0; y < h + 1; y++) {
         /*
@@ -6354,12 +6385,12 @@ void ff_put_vp8_bilinear4_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "gslwlc1    %[ftmp1],   0x03(%[src])                        \n\t"
+            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[a],       %[ftmp3]                            \n\t"
-            "gslwrc1    %[ftmp1],   0x00(%[src])                        \n\t"
-            "gslwlc1    %[ftmp2],   0x04(%[src])                        \n\t"
+            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "mtc1       %[b],       %[ftmp4]                            \n\t"
-            "gslwrc1    %[ftmp2],   0x01(%[src])                        \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -6375,7 +6406,8 @@ void ff_put_vp8_bilinear4_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
-              [tmp]"+&r"(tmp)
+              [tmp]"+&r"(tmp),
+              [low32]"=&r"(low32)
             : [src]"r"(src),                [a]"r"(a),
               [b]"r"(b),
               [ff_pw_4]"f"(ff_pw_4),        [ff_pw_3]"f"(ff_pw_3)
