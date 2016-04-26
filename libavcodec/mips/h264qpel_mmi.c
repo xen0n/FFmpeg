@@ -22,6 +22,7 @@
  */
 
 #include "h264dsp_mips.h"
+#include "hpeldsp_mips.h"
 #include "libavcodec/bit_depth_template.c"
 #include "libavutil/mips/asmdefs.h"
 
@@ -104,357 +105,6 @@ static inline void copy_block16_mmi(uint8_t *dst, const uint8_t *src,
         : "memory"
     );
 }
-
-static inline void put_pixels4_mmi(uint8_t *block, const uint8_t *pixels,
-        ptrdiff_t line_size, int h)
-{
-    double ftmp[1];
-    uint64_t tmp[1];
-    uint64_t low32;
-
-    __asm__ volatile (
-        "1:                                                             \n\t"
-        "uld        %[low32],   0x00(%[pixels])                         \n\t"
-        "mtc1       %[low32],   %[ftmp0]                                \n\t"
-        PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
-        "lwl        %[tmp0],    0x03(%[pixels])                         \n\t"
-        "lwr        %[tmp0],    0x00(%[pixels])                         \n\t"
-        "gsswlc1    %[ftmp0],   0x03(%[block])                          \n\t"
-        "gsswrc1    %[ftmp0],   0x00(%[block])                          \n\t"
-        PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
-        "swl        %[tmp0],    0x03(%[block])                          \n\t"
-        "swr        %[tmp0],    0x00(%[block])                          \n\t"
-        "addi       %[h],       %[h],           -0x02                   \n\t"
-        PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
-        PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
-        "bnez       %[h],       1b                                      \n\t"
-        : [ftmp0]"=&f"(ftmp[0]),
-          [tmp0]"=&r"(tmp[0]),
-          [block]"+&r"(block),              [pixels]"+&r"(pixels),
-          [h]"+&r"(h),
-          [low32]"=&r"(low32)
-        : [line_size]"r"((mips_reg)line_size)
-        : "memory"
-    );
-}
-
-static inline void put_pixels8_mmi(uint8_t *block, const uint8_t *pixels,
-        ptrdiff_t line_size, int h)
-{
-    double ftmp[1];
-    uint64_t tmp[1];
-
-    __asm__ volatile (
-        "1:                                                             \n\t"
-        "gsldlc1    %[ftmp0],   0x07(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp0],   0x00(%[pixels])                         \n\t"
-        PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
-        "ldl        %[tmp0],    0x07(%[pixels])                         \n\t"
-        "ldr        %[tmp0],    0x00(%[pixels])                         \n\t"
-        "gssdlc1    %[ftmp0],   0x07(%[block])                          \n\t"
-        "gssdrc1    %[ftmp0],   0x00(%[block])                          \n\t"
-        PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
-        "sdl        %[tmp0],    0x07(%[block])                          \n\t"
-        "sdr        %[tmp0],    0x00(%[block])                          \n\t"
-        "addi       %[h],       %[h],           -0x02                   \n\t"
-        PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
-        PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
-        "bnez       %[h],       1b                                      \n\t"
-        : [ftmp0]"=&f"(ftmp[0]),
-          [tmp0]"=&r"(tmp[0]),
-          [block]"+&r"(block),              [pixels]"+&r"(pixels),
-          [h]"+&r"(h)
-        : [line_size]"r"((mips_reg)line_size)
-        : "memory"
-    );
-}
-
-static inline void put_pixels16_mmi(uint8_t *block, const uint8_t *pixels,
-        ptrdiff_t line_size, int h)
-{
-    double ftmp[8];
-
-    __asm__ volatile (
-        "1:                                                             \n\t"
-        "gsldlc1    %[ftmp0],   0x07(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp0],   0x00(%[pixels])                         \n\t"
-        "gsldlc1    %[ftmp1],   0x0f(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp1],   0x08(%[pixels])                         \n\t"
-        PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
-        "gsldlc1    %[ftmp2],   0x07(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp2],   0x00(%[pixels])                         \n\t"
-        "gsldlc1    %[ftmp3],   0x0f(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp3],   0x08(%[pixels])                         \n\t"
-        PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
-        "gsldlc1    %[ftmp4],   0x07(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp4],   0x00(%[pixels])                         \n\t"
-        "gsldlc1    %[ftmp5],   0x0f(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp5],   0x08(%[pixels])                         \n\t"
-        PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
-        "gsldlc1    %[ftmp6],   0x07(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp6],   0x00(%[pixels])                         \n\t"
-        "gsldlc1    %[ftmp7],   0x0f(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp7],   0x08(%[pixels])                         \n\t"
-
-        "sdc1       %[ftmp0],   0x00(%[block])                          \n\t"
-        "sdc1       %[ftmp1],   0x08(%[block])                          \n\t"
-        PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
-        "sdc1       %[ftmp2],   0x00(%[block])                          \n\t"
-        "sdc1       %[ftmp3],   0x08(%[block])                          \n\t"
-        PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
-        "sdc1       %[ftmp4],   0x00(%[block])                          \n\t"
-        "sdc1       %[ftmp5],   0x08(%[block])                          \n\t"
-        PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
-        "sdc1       %[ftmp6],   0x00(%[block])                          \n\t"
-        "sdc1       %[ftmp7],   0x08(%[block])                          \n\t"
-
-        "addi       %[h],       %[h],           -0x04                   \n\t"
-        PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
-        PTR_ADDU   "%[block],   %[block],       %[line_size]            \n\t"
-        "bnez       %[h],       1b                                      \n\t"
-        : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
-          [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
-          [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
-          [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
-          [block]"+&r"(block),              [pixels]"+&r"(pixels),
-          [h]"+&r"(h)
-        : [line_size]"r"((mips_reg)line_size)
-        : "memory"
-    );
-}
-
-static inline void avg_pixels4_mmi(uint8_t *block, const uint8_t *pixels,
-        ptrdiff_t line_size, int h)
-{
-    double ftmp[4];
-    mips_reg addr[2];
-    uint64_t low32;
-
-    __asm__ volatile (
-        "1:                                                             \n\t"
-        "uld        %[low32],   0x00(%[pixels])                         \n\t"
-        "mtc1       %[low32],   %[ftmp0]                                \n\t"
-        "uld        %[low32],   0x00(%[block])                          \n\t"
-        "mtc1       %[low32],   %[ftmp1]                                \n\t"
-        PTR_ADDU   "%[addr0],   %[pixels],      %[line_size]            \n\t"
-        PTR_ADDU   "%[addr1],   %[block],       %[line_size]            \n\t"
-        "uld        %[low32],   0x00(%[addr0])                          \n\t"
-        "mtc1       %[low32],   %[ftmp2]                                \n\t"
-        "uld        %[low32],   0x00(%[addr1])                          \n\t"
-        "mtc1       %[low32],   %[ftmp3]                                \n\t"
-        "pavgb      %[ftmp0],   %[ftmp0],       %[ftmp1]                \n\t"
-        "pavgb      %[ftmp2],   %[ftmp2],       %[ftmp3]                \n\t"
-        "gsswlc1    %[ftmp0],   0x03(%[block])                          \n\t"
-        "gsswrc1    %[ftmp0],   0x00(%[block])                          \n\t"
-        "gsswlc1    %[ftmp2],   0x03(%[addr1])                          \n\t"
-        "gsswrc1    %[ftmp2],   0x00(%[addr1])                          \n\t"
-        "addi       %[h],       %[h],           -0x02                   \n\t"
-        PTR_ADDU   "%[pixels],  %[addr0],       %[line_size]            \n\t"
-        PTR_ADDU   "%[block],   %[addr1],       %[line_size]            \n\t"
-        "bnez       %[h],       1b                                      \n\t"
-        : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
-          [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
-          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
-          [block]"+&r"(block),              [pixels]"+&r"(pixels),
-          [h]"+&r"(h),
-          [low32]"=&r"(low32)
-        : [line_size]"r"((mips_reg)line_size)
-        : "memory"
-    );
-}
-
-static inline void avg_pixels8_mmi(uint8_t *block, const uint8_t *pixels,
-        ptrdiff_t line_size, int h)
-{
-    double ftmp[4];
-    mips_reg addr[2];
-
-    __asm__ volatile (
-        "1:                                                             \n\t"
-        "gsldlc1    %[ftmp0],   0x07(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp0],   0x00(%[pixels])                         \n\t"
-        "gsldlc1    %[ftmp1],   0x07(%[block])                          \n\t"
-        "gsldrc1    %[ftmp1],   0x00(%[block])                          \n\t"
-        PTR_ADDU   "%[addr0],   %[pixels],      %[line_size]            \n\t"
-        PTR_ADDU   "%[addr1],   %[block],       %[line_size]            \n\t"
-        "gsldlc1    %[ftmp2],   0x07(%[addr0])                          \n\t"
-        "gsldrc1    %[ftmp2],   0x00(%[addr0])                          \n\t"
-        "gsldlc1    %[ftmp3],   0x07(%[addr1])                          \n\t"
-        "gsldrc1    %[ftmp3],   0x00(%[addr1])                          \n\t"
-        "pavgb      %[ftmp0],   %[ftmp0],       %[ftmp1]                \n\t"
-        "pavgb      %[ftmp2],   %[ftmp2],       %[ftmp3]                \n\t"
-        "sdc1       %[ftmp0],   0x00(%[block])                          \n\t"
-        "sdc1       %[ftmp2],   0x00(%[addr1])                          \n\t"
-        "addi       %[h],       %[h],           -0x02                   \n\t"
-        PTR_ADDU   "%[pixels],  %[addr0],       %[line_size]            \n\t"
-        PTR_ADDU   "%[block],   %[addr1],       %[line_size]            \n\t"
-        "bnez       %[h],       1b                                      \n\t"
-        : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
-          [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
-          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
-          [block]"+&r"(block),              [pixels]"+&r"(pixels),
-          [h]"+&r"(h)
-        : [line_size]"r"((mips_reg)line_size)
-        : "memory"
-    );
-}
-
-static inline void avg_pixels16_mmi(uint8_t *block, const uint8_t *pixels,
-        ptrdiff_t line_size, int h)
-{
-    double ftmp[8];
-    mips_reg addr[2];
-
-    __asm__ volatile (
-        "1:                                                             \n\t"
-        "gsldlc1    %[ftmp0],   0x07(%[block])                          \n\t"
-        "gsldrc1    %[ftmp0],   0x00(%[block])                          \n\t"
-        "gsldlc1    %[ftmp1],   0x0f(%[block])                          \n\t"
-        "gsldrc1    %[ftmp1],   0x08(%[block])                          \n\t"
-        "gsldlc1    %[ftmp2],   0x07(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp2],   0x00(%[pixels])                         \n\t"
-        "gsldlc1    %[ftmp3],   0x0f(%[pixels])                         \n\t"
-        "gsldrc1    %[ftmp3],   0x08(%[pixels])                         \n\t"
-        PTR_ADDU   "%[addr0],   %[pixels],      %[line_size]            \n\t"
-        PTR_ADDU   "%[addr1],   %[block],       %[line_size]            \n\t"
-        "gsldlc1    %[ftmp4],   0x07(%[addr1])                          \n\t"
-        "gsldrc1    %[ftmp4],   0x00(%[addr1])                          \n\t"
-        "gsldlc1    %[ftmp5],   0x0f(%[addr1])                          \n\t"
-        "gsldrc1    %[ftmp5],   0x08(%[addr1])                          \n\t"
-        "gsldlc1    %[ftmp6],   0x07(%[addr0])                          \n\t"
-        "gsldrc1    %[ftmp6],   0x00(%[addr0])                          \n\t"
-        "gsldlc1    %[ftmp7],   0x0f(%[addr0])                          \n\t"
-        "gsldrc1    %[ftmp7],   0x08(%[addr0])                          \n\t"
-        "pavgb      %[ftmp0],   %[ftmp0],       %[ftmp2]                \n\t"
-        "pavgb      %[ftmp1],   %[ftmp1],       %[ftmp3]                \n\t"
-        "pavgb      %[ftmp4],   %[ftmp4],       %[ftmp6]                \n\t"
-        "pavgb      %[ftmp5],   %[ftmp5],       %[ftmp7]                \n\t"
-        "sdc1       %[ftmp0],   0x00(%[block])                          \n\t"
-        "sdc1       %[ftmp1],   0x08(%[block])                          \n\t"
-        "sdc1       %[ftmp4],   0x00(%[addr1])                          \n\t"
-        "sdc1       %[ftmp5],   0x08(%[addr1])                          \n\t"
-        "addi       %[h],       %[h],           -0x02                   \n\t"
-        PTR_ADDU   "%[pixels],  %[addr0],       %[line_size]            \n\t"
-        PTR_ADDU   "%[block],   %[addr1],       %[line_size]            \n\t"
-        "bnez       %[h],       1b                                      \n\t"
-        : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
-          [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
-          [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
-          [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
-          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
-          [block]"+&r"(block),              [pixels]"+&r"(pixels),
-          [h]"+&r"(h)
-        : [line_size]"r"((mips_reg)line_size)
-        : "memory"
-    );
-}
-
-#define op_put(a, b) a = b
-#define op_avg(a, b) a = rnd_avg_pixel4(a, b)
-static inline void put_pixels4_l2_mmi(uint8_t *dst, const uint8_t *src1,
-        const uint8_t *src2, int dst_stride, int src_stride1, int src_stride2,
-        int h)
-{
-    int i;
-    for (i = 0; i < h; i++) {
-        pixel4 a, b;
-        a = AV_RN4P(&src1[i * src_stride1]);
-        b = AV_RN4P(&src2[i * src_stride2]);
-        op_put(*((pixel4 *) &dst[i * dst_stride]), rnd_avg_pixel4(a, b));
-    }
-}
-
-static inline void put_pixels8_l2_mmi(uint8_t *dst, const uint8_t *src1,
-        const uint8_t *src2, int dst_stride, int src_stride1, int src_stride2,
-        int h)
-{
-    int i;
-    for (i = 0; i < h; i++) {
-        pixel4 a, b;
-        a = AV_RN4P(&src1[i * src_stride1]);
-        b = AV_RN4P(&src2[i * src_stride2]);
-        op_put(*((pixel4 *) &dst[i * dst_stride]), rnd_avg_pixel4(a, b));
-        a = AV_RN4P(&src1[i * src_stride1 + 4]);
-        b = AV_RN4P(&src2[i * src_stride2 + 4]);
-        op_put(*((pixel4 *) &dst[i * dst_stride + 4]), rnd_avg_pixel4(a, b));
-    }
-}
-
-static inline void put_pixels16_l2_mmi(uint8_t *dst, const uint8_t *src1,
-        const uint8_t *src2, int dst_stride, int src_stride1, int src_stride2,
-        int h)
-{
-    int i;
-    for (i = 0; i < h; i++) {
-        pixel4 a, b;
-        a = AV_RN4P(&src1[i * src_stride1]);
-        b = AV_RN4P(&src2[i * src_stride2]);
-        op_put(*((pixel4 *) &dst[i * dst_stride]), rnd_avg_pixel4(a, b));
-        a = AV_RN4P(&src1[i * src_stride1 + 4]);
-        b = AV_RN4P(&src2[i * src_stride2 + 4]);
-        op_put(*((pixel4 *) &dst[i * dst_stride + 4]), rnd_avg_pixel4(a, b));
-        a = AV_RN4P(&src1[i * src_stride1 + 8]);
-        b = AV_RN4P(&src2[i * src_stride2 + 8]);
-        op_put(*((pixel4 *) &dst[i * dst_stride + 8]), rnd_avg_pixel4(a, b));
-        a = AV_RN4P(&src1[i * src_stride1 + 12]);
-        b = AV_RN4P(&src2[i * src_stride2 + 12]);
-        op_put(*((pixel4 *) &dst[i * dst_stride + 12]), rnd_avg_pixel4(a, b));
-    }
-}
-
-static inline void avg_pixels4_l2_mmi(uint8_t *dst, const uint8_t *src1,
-        const uint8_t *src2, int dst_stride, int src_stride1, int src_stride2,
-        int h)
-{
-    int i;
-    for (i = 0; i < h; i++) {
-        pixel4 a, b;
-        a = AV_RN4P(&src1[i * src_stride1]);
-        b = AV_RN4P(&src2[i * src_stride2]);
-        op_avg(*((pixel4 *) &dst[i * dst_stride]), rnd_avg_pixel4(a, b));
-    }
-}
-
-static inline void avg_pixels8_l2_mmi(uint8_t *dst, const uint8_t *src1,
-        const uint8_t *src2, int dst_stride, int src_stride1, int src_stride2,
-        int h)
-{
-    int i;
-    for (i = 0; i < h; i++) {
-        pixel4 a, b;
-        a = AV_RN4P(&src1[i * src_stride1]);
-        b = AV_RN4P(&src2[i * src_stride2]);
-        op_avg(*((pixel4 *) &dst[i * dst_stride]), rnd_avg_pixel4(a, b));
-        a = AV_RN4P(&src1[i * src_stride1 + 4]);
-        b = AV_RN4P(&src2[i * src_stride2 + 4]);
-        op_avg(*((pixel4 *) &dst[i * dst_stride + 4]), rnd_avg_pixel4(a, b));
-    }
-}
-
-static inline void avg_pixels16_l2_mmi(uint8_t *dst, const uint8_t *src1,
-        const uint8_t *src2, int dst_stride, int src_stride1, int src_stride2,
-        int h)
-{
-    int i;
-    for (i = 0; i < h; i++) {
-        pixel4 a, b;
-        a = AV_RN4P(&src1[i * src_stride1]);
-        b = AV_RN4P(&src2[i * src_stride2]);
-        op_avg(*((pixel4 *) &dst[i * dst_stride]), rnd_avg_pixel4(a, b));
-        a = AV_RN4P(&src1[i * src_stride1 + 4]);
-        b = AV_RN4P(&src2[i * src_stride2 + 4]);
-        op_avg(*((pixel4 *) &dst[i * dst_stride + 4]), rnd_avg_pixel4(a, b));
-        a = AV_RN4P(&src1[i * src_stride1 + 8]);
-        b = AV_RN4P(&src2[i * src_stride2 + 8]);
-        op_avg(*((pixel4 *) &dst[i * dst_stride + 8]), rnd_avg_pixel4(a, b));
-        a = AV_RN4P(&src1[i * src_stride1 + 12]);
-        b = AV_RN4P(&src2[i * src_stride2 + 12]);
-        op_avg(*((pixel4 *) &dst[i * dst_stride + 12]), rnd_avg_pixel4(a, b));
-
-    }
-}
-#undef op_put
-#undef op_avg
 
 #define op2_avg(a, b)  a = (((a)+CLIP(((b) + 512)>>10)+1)>>1)
 #define op2_put(a, b)  a = CLIP(((b) + 512)>>10)
@@ -2628,7 +2278,7 @@ static void avg_pixels16_l2_shift5_mmi(uint8_t *dst, int16_t *src16,
 void ff_put_h264_qpel4_mc00_mmi(uint8_t *dst, const uint8_t *src,
         ptrdiff_t stride)
 {
-    put_pixels4_mmi(dst, src, stride, 4);
+    ff_put_pixels4_8_mmi(dst, src, stride, 4);
 }
 
 void ff_put_h264_qpel4_mc10_mmi(uint8_t *dst, const uint8_t *src,
@@ -2636,7 +2286,7 @@ void ff_put_h264_qpel4_mc10_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[16];
     put_h264_qpel4_h_lowpass_mmi(half, src, 4, stride);
-    put_pixels4_l2_mmi(dst, src, half, stride, stride, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, src, half, stride, stride, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc20_mmi(uint8_t *dst, const uint8_t *src,
@@ -2650,7 +2300,7 @@ void ff_put_h264_qpel4_mc30_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[16];
     put_h264_qpel4_h_lowpass_mmi(half, src, 4, stride);
-    put_pixels4_l2_mmi(dst, src+1, half, stride, stride, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, src+1, half, stride, stride, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc01_mmi(uint8_t *dst, const uint8_t *src,
@@ -2661,7 +2311,7 @@ void ff_put_h264_qpel4_mc01_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[16];
     copy_block4_mmi(full, src - stride*2, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(half, full_mid, 4, 4);
-    put_pixels4_l2_mmi(dst, full_mid, half, stride, 4, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, full_mid, half, stride, 4, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc02_mmi(uint8_t *dst, const uint8_t *src,
@@ -2681,7 +2331,7 @@ void ff_put_h264_qpel4_mc03_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[16];
     copy_block4_mmi(full, src - stride*2, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(half, full_mid, 4, 4);
-    put_pixels4_l2_mmi(dst, full_mid+4, half, stride, 4, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, full_mid+4, half, stride, 4, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc11_mmi(uint8_t *dst, const uint8_t *src,
@@ -2694,7 +2344,7 @@ void ff_put_h264_qpel4_mc11_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel4_h_lowpass_mmi(halfH, src, 4, stride);
     copy_block4_mmi(full, src - stride*2, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
-    put_pixels4_l2_mmi(dst, halfH, halfV, stride, 4, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, halfH, halfV, stride, 4, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc31_mmi(uint8_t *dst, const uint8_t *src,
@@ -2707,7 +2357,7 @@ void ff_put_h264_qpel4_mc31_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel4_h_lowpass_mmi(halfH, src, 4, stride);
     copy_block4_mmi(full, src - stride*2 + 1, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
-    put_pixels4_l2_mmi(dst, halfH, halfV, stride, 4, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, halfH, halfV, stride, 4, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc13_mmi(uint8_t *dst, const uint8_t *src,
@@ -2720,7 +2370,7 @@ void ff_put_h264_qpel4_mc13_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel4_h_lowpass_mmi(halfH, src + stride, 4, stride);
     copy_block4_mmi(full, src - stride*2, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
-    put_pixels4_l2_mmi(dst, halfH, halfV, stride, 4, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, halfH, halfV, stride, 4, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc33_mmi(uint8_t *dst, const uint8_t *src,
@@ -2733,7 +2383,7 @@ void ff_put_h264_qpel4_mc33_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel4_h_lowpass_mmi(halfH, src + stride, 4, stride);
     copy_block4_mmi(full, src - stride*2 + 1, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
-    put_pixels4_l2_mmi(dst, halfH, halfV, stride, 4, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, halfH, halfV, stride, 4, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc22_mmi(uint8_t *dst, const uint8_t *src,
@@ -2749,7 +2399,7 @@ void ff_put_h264_qpel4_mc21_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t halfHV[16];
     put_h264_qpel4_h_lowpass_mmi(halfH, src, 4, stride);
     put_h264_qpel4_hv_lowpass_mmi(halfHV, src, 4, stride);
-    put_pixels4_l2_mmi(dst, halfH, halfHV, stride, 4, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, halfH, halfHV, stride, 4, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc23_mmi(uint8_t *dst, const uint8_t *src,
@@ -2759,7 +2409,7 @@ void ff_put_h264_qpel4_mc23_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t halfHV[16];
     put_h264_qpel4_h_lowpass_mmi(halfH, src + stride, 4, stride);
     put_h264_qpel4_hv_lowpass_mmi(halfHV, src, 4, stride);
-    put_pixels4_l2_mmi(dst, halfH, halfHV, stride, 4, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, halfH, halfHV, stride, 4, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc12_mmi(uint8_t *dst, const uint8_t *src,
@@ -2772,7 +2422,7 @@ void ff_put_h264_qpel4_mc12_mmi(uint8_t *dst, const uint8_t *src,
     copy_block4_mmi(full, src - stride*2, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
     put_h264_qpel4_hv_lowpass_mmi(halfHV, src, 4, stride);
-    put_pixels4_l2_mmi(dst, halfV, halfHV, stride, 4, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, halfV, halfHV, stride, 4, 4, 4);
 }
 
 void ff_put_h264_qpel4_mc32_mmi(uint8_t *dst, const uint8_t *src,
@@ -2785,14 +2435,14 @@ void ff_put_h264_qpel4_mc32_mmi(uint8_t *dst, const uint8_t *src,
     copy_block4_mmi(full, src - stride*2 + 1, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
     put_h264_qpel4_hv_lowpass_mmi(halfHV, src, 4, stride);
-    put_pixels4_l2_mmi(dst, halfV, halfHV, stride, 4, 4, 4);
+    ff_put_pixels4_l2_8_mmi(dst, halfV, halfHV, stride, 4, 4, 4);
 }
 
 //DEF_H264_MC_MMI(avg_, 4)
 void ff_avg_h264_qpel4_mc00_mmi(uint8_t *dst, const uint8_t *src,
         ptrdiff_t stride)
 {
-    avg_pixels4_mmi(dst, src, stride, 4);
+    ff_avg_pixels4_8_mmi(dst, src, stride, 4);
 }
 
 void ff_avg_h264_qpel4_mc10_mmi(uint8_t *dst, const uint8_t *src,
@@ -2800,7 +2450,7 @@ void ff_avg_h264_qpel4_mc10_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[16];
     put_h264_qpel4_h_lowpass_mmi(half, src, 4, stride);
-    avg_pixels4_l2_mmi(dst, src, half, stride, stride, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, src, half, stride, stride, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc20_mmi(uint8_t *dst, const uint8_t *src,
@@ -2814,7 +2464,7 @@ void ff_avg_h264_qpel4_mc30_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[16];
     put_h264_qpel4_h_lowpass_mmi(half, src, 4, stride);
-    avg_pixels4_l2_mmi(dst, src+1, half, stride, stride, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, src+1, half, stride, stride, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc01_mmi(uint8_t *dst, const uint8_t *src,
@@ -2825,7 +2475,7 @@ void ff_avg_h264_qpel4_mc01_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[16];
     copy_block4_mmi(full, src - stride*2, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(half, full_mid, 4, 4);
-    avg_pixels4_l2_mmi(dst, full_mid, half, stride, 4, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, full_mid, half, stride, 4, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc02_mmi(uint8_t *dst, const uint8_t *src,
@@ -2845,7 +2495,7 @@ void ff_avg_h264_qpel4_mc03_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[16];
     copy_block4_mmi(full, src - stride*2, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(half, full_mid, 4, 4);
-    avg_pixels4_l2_mmi(dst, full_mid+4, half, stride, 4, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, full_mid+4, half, stride, 4, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc11_mmi(uint8_t *dst, const uint8_t *src,
@@ -2858,7 +2508,7 @@ void ff_avg_h264_qpel4_mc11_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel4_h_lowpass_mmi(halfH, src, 4, stride);
     copy_block4_mmi(full, src - stride*2, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
-    avg_pixels4_l2_mmi(dst, halfH, halfV, stride, 4, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, halfH, halfV, stride, 4, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc31_mmi(uint8_t *dst, const uint8_t *src,
@@ -2871,7 +2521,7 @@ void ff_avg_h264_qpel4_mc31_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel4_h_lowpass_mmi(halfH, src, 4, stride);
     copy_block4_mmi(full, src - stride*2 + 1, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
-    avg_pixels4_l2_mmi(dst, halfH, halfV, stride, 4, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, halfH, halfV, stride, 4, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc13_mmi(uint8_t *dst, const uint8_t *src,
@@ -2884,7 +2534,7 @@ void ff_avg_h264_qpel4_mc13_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel4_h_lowpass_mmi(halfH, src + stride, 4, stride);
     copy_block4_mmi(full, src - stride*2, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
-    avg_pixels4_l2_mmi(dst, halfH, halfV, stride, 4, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, halfH, halfV, stride, 4, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc33_mmi(uint8_t *dst, const uint8_t *src,
@@ -2897,7 +2547,7 @@ void ff_avg_h264_qpel4_mc33_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel4_h_lowpass_mmi(halfH, src + stride, 4, stride);
     copy_block4_mmi(full, src - stride*2 + 1, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
-    avg_pixels4_l2_mmi(dst, halfH, halfV, stride, 4, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, halfH, halfV, stride, 4, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc22_mmi(uint8_t *dst, const uint8_t *src,
@@ -2913,7 +2563,7 @@ void ff_avg_h264_qpel4_mc21_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t halfHV[16];
     put_h264_qpel4_h_lowpass_mmi(halfH, src, 4, stride);
     put_h264_qpel4_hv_lowpass_mmi(halfHV, src, 4, stride);
-    avg_pixels4_l2_mmi(dst, halfH, halfHV, stride, 4, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, halfH, halfHV, stride, 4, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc23_mmi(uint8_t *dst, const uint8_t *src,
@@ -2923,7 +2573,7 @@ void ff_avg_h264_qpel4_mc23_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t halfHV[16];
     put_h264_qpel4_h_lowpass_mmi(halfH, src + stride, 4, stride);
     put_h264_qpel4_hv_lowpass_mmi(halfHV, src, 4, stride);
-    avg_pixels4_l2_mmi(dst, halfH, halfHV, stride, 4, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, halfH, halfHV, stride, 4, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc12_mmi(uint8_t *dst, const uint8_t *src,
@@ -2936,7 +2586,7 @@ void ff_avg_h264_qpel4_mc12_mmi(uint8_t *dst, const uint8_t *src,
     copy_block4_mmi(full, src - stride*2, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
     put_h264_qpel4_hv_lowpass_mmi(halfHV, src, 4, stride);
-    avg_pixels4_l2_mmi(dst, halfV, halfHV, stride, 4, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, halfV, halfHV, stride, 4, 4, 4);
 }
 
 void ff_avg_h264_qpel4_mc32_mmi(uint8_t *dst, const uint8_t *src,
@@ -2949,14 +2599,14 @@ void ff_avg_h264_qpel4_mc32_mmi(uint8_t *dst, const uint8_t *src,
     copy_block4_mmi(full, src - stride*2 + 1, 4,  stride, 9);
     put_h264_qpel4_v_lowpass_mmi(halfV, full_mid, 4, 4);
     put_h264_qpel4_hv_lowpass_mmi(halfHV, src, 4, stride);
-    avg_pixels4_l2_mmi(dst, halfV, halfHV, stride, 4, 4, 4);
+    ff_avg_pixels4_l2_8_mmi(dst, halfV, halfHV, stride, 4, 4, 4);
 }
 
 //DEF_H264_MC_MMI(put_, 8)
 void ff_put_h264_qpel8_mc00_mmi(uint8_t *dst, const uint8_t *src,
         ptrdiff_t stride)
 {
-    put_pixels8_mmi(dst, src, stride, 8);
+    ff_put_pixels8_8_mmi(dst, src, stride, 8);
 }
 
 void ff_put_h264_qpel8_mc10_mmi(uint8_t *dst, const uint8_t *src,
@@ -2964,7 +2614,7 @@ void ff_put_h264_qpel8_mc10_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[64];
     put_h264_qpel8_h_lowpass_mmi(half, src, 8, stride);
-    put_pixels8_l2_mmi(dst, src, half, stride, stride, 8, 8);
+    ff_put_pixels8_l2_8_mmi(dst, src, half, stride, stride, 8, 8);
 }
 
 void ff_put_h264_qpel8_mc20_mmi(uint8_t *dst, const uint8_t *src,
@@ -2978,7 +2628,7 @@ void ff_put_h264_qpel8_mc30_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[64];
     put_h264_qpel8_h_lowpass_mmi(half, src, 8, stride);
-    put_pixels8_l2_mmi(dst, src+1, half, stride, stride, 8, 8);
+    ff_put_pixels8_l2_8_mmi(dst, src+1, half, stride, stride, 8, 8);
 }
 
 void ff_put_h264_qpel8_mc01_mmi(uint8_t *dst, const uint8_t *src,
@@ -2989,7 +2639,7 @@ void ff_put_h264_qpel8_mc01_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[64];
     copy_block8_mmi(full, src - stride*2, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(half, full_mid, 8, 8);
-    put_pixels8_l2_mmi(dst, full_mid, half, stride, 8, 8, 8);
+    ff_put_pixels8_l2_8_mmi(dst, full_mid, half, stride, 8, 8, 8);
 }
 
 void ff_put_h264_qpel8_mc02_mmi(uint8_t *dst, const uint8_t *src,
@@ -3009,7 +2659,7 @@ void ff_put_h264_qpel8_mc03_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[64];
     copy_block8_mmi(full, src - stride*2, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(half, full_mid, 8, 8);
-    put_pixels8_l2_mmi(dst, full_mid+8, half, stride, 8, 8, 8);
+    ff_put_pixels8_l2_8_mmi(dst, full_mid+8, half, stride, 8, 8, 8);
 }
 
 void ff_put_h264_qpel8_mc11_mmi(uint8_t *dst, const uint8_t *src,
@@ -3022,7 +2672,7 @@ void ff_put_h264_qpel8_mc11_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel8_h_lowpass_mmi(halfH, src, 8, stride);
     copy_block8_mmi(full, src - stride*2, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(halfV, full_mid, 8, 8);
-    put_pixels8_l2_mmi(dst, halfH, halfV, stride, 8, 8, 8);
+    ff_put_pixels8_l2_8_mmi(dst, halfH, halfV, stride, 8, 8, 8);
 }
 
 void ff_put_h264_qpel8_mc31_mmi(uint8_t *dst, const uint8_t *src,
@@ -3035,7 +2685,7 @@ void ff_put_h264_qpel8_mc31_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel8_h_lowpass_mmi(halfH, src, 8, stride);
     copy_block8_mmi(full, src - stride*2 + 1, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(halfV, full_mid, 8, 8);
-    put_pixels8_l2_mmi(dst, halfH, halfV, stride, 8, 8, 8);
+    ff_put_pixels8_l2_8_mmi(dst, halfH, halfV, stride, 8, 8, 8);
 }
 
 void ff_put_h264_qpel8_mc13_mmi(uint8_t *dst, const uint8_t *src,
@@ -3048,7 +2698,7 @@ void ff_put_h264_qpel8_mc13_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel8_h_lowpass_mmi(halfH, src + stride, 8, stride);
     copy_block8_mmi(full, src - stride*2, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(halfV, full_mid, 8, 8);
-    put_pixels8_l2_mmi(dst, halfH, halfV, stride, 8, 8, 8);
+    ff_put_pixels8_l2_8_mmi(dst, halfH, halfV, stride, 8, 8, 8);
 }
 
 void ff_put_h264_qpel8_mc33_mmi(uint8_t *dst, const uint8_t *src,
@@ -3061,7 +2711,7 @@ void ff_put_h264_qpel8_mc33_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel8_h_lowpass_mmi(halfH, src + stride, 8, stride);
     copy_block8_mmi(full, src - stride*2 + 1, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(halfV, full_mid, 8, 8);
-    put_pixels8_l2_mmi(dst, halfH, halfV, stride, 8, 8, 8);
+    ff_put_pixels8_l2_8_mmi(dst, halfH, halfV, stride, 8, 8, 8);
 }
 
 void ff_put_h264_qpel8_mc22_mmi(uint8_t *dst, const uint8_t *src,
@@ -3120,7 +2770,7 @@ void ff_put_h264_qpel8_mc32_mmi(uint8_t *dst, const uint8_t *src,
 void ff_avg_h264_qpel8_mc00_mmi(uint8_t *dst, const uint8_t *src,
         ptrdiff_t stride)
 {
-    avg_pixels8_mmi(dst, src, stride, 8);
+    ff_avg_pixels8_8_mmi(dst, src, stride, 8);
 }
 
 void ff_avg_h264_qpel8_mc10_mmi(uint8_t *dst, const uint8_t *src,
@@ -3128,7 +2778,7 @@ void ff_avg_h264_qpel8_mc10_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[64];
     put_h264_qpel8_h_lowpass_mmi(half, src, 8, stride);
-    avg_pixels8_l2_mmi(dst, src, half, stride, stride, 8, 8);
+    ff_avg_pixels8_l2_8_mmi(dst, src, half, stride, stride, 8, 8);
 }
 
 void ff_avg_h264_qpel8_mc20_mmi(uint8_t *dst, const uint8_t *src,
@@ -3142,7 +2792,7 @@ void ff_avg_h264_qpel8_mc30_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[64];
     put_h264_qpel8_h_lowpass_mmi(half, src, 8, stride);
-    avg_pixels8_l2_mmi(dst, src+1, half, stride, stride, 8, 8);
+    ff_avg_pixels8_l2_8_mmi(dst, src+1, half, stride, stride, 8, 8);
 }
 
 void ff_avg_h264_qpel8_mc01_mmi(uint8_t *dst, const uint8_t *src,
@@ -3153,7 +2803,7 @@ void ff_avg_h264_qpel8_mc01_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[64];
     copy_block8_mmi(full, src - stride*2, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(half, full_mid, 8, 8);
-    avg_pixels8_l2_mmi(dst, full_mid, half, stride, 8, 8, 8);
+    ff_avg_pixels8_l2_8_mmi(dst, full_mid, half, stride, 8, 8, 8);
 }
 
 void ff_avg_h264_qpel8_mc02_mmi(uint8_t *dst, const uint8_t *src,
@@ -3173,7 +2823,7 @@ void ff_avg_h264_qpel8_mc03_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[64];
     copy_block8_mmi(full, src - stride*2, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(half, full_mid, 8, 8);
-    avg_pixels8_l2_mmi(dst, full_mid+8, half, stride, 8, 8, 8);
+    ff_avg_pixels8_l2_8_mmi(dst, full_mid+8, half, stride, 8, 8, 8);
 }
 
 void ff_avg_h264_qpel8_mc11_mmi(uint8_t *dst, const uint8_t *src,
@@ -3186,7 +2836,7 @@ void ff_avg_h264_qpel8_mc11_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel8_h_lowpass_mmi(halfH, src, 8, stride);
     copy_block8_mmi(full, src - stride*2, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(halfV, full_mid, 8, 8);
-    avg_pixels8_l2_mmi(dst, halfH, halfV, stride, 8, 8, 8);
+    ff_avg_pixels8_l2_8_mmi(dst, halfH, halfV, stride, 8, 8, 8);
 }
 
 void ff_avg_h264_qpel8_mc31_mmi(uint8_t *dst, const uint8_t *src,
@@ -3199,7 +2849,7 @@ void ff_avg_h264_qpel8_mc31_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel8_h_lowpass_mmi(halfH, src, 8, stride);
     copy_block8_mmi(full, src - stride*2 + 1, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(halfV, full_mid, 8, 8);
-    avg_pixels8_l2_mmi(dst, halfH, halfV, stride, 8, 8, 8);
+    ff_avg_pixels8_l2_8_mmi(dst, halfH, halfV, stride, 8, 8, 8);
 }
 
 void ff_avg_h264_qpel8_mc13_mmi(uint8_t *dst, const uint8_t *src,
@@ -3212,7 +2862,7 @@ void ff_avg_h264_qpel8_mc13_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel8_h_lowpass_mmi(halfH, src + stride, 8, stride);
     copy_block8_mmi(full, src - stride*2, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(halfV, full_mid, 8, 8);
-    avg_pixels8_l2_mmi(dst, halfH, halfV, stride, 8, 8, 8);
+    ff_avg_pixels8_l2_8_mmi(dst, halfH, halfV, stride, 8, 8, 8);
 }
 
 void ff_avg_h264_qpel8_mc33_mmi(uint8_t *dst, const uint8_t *src,
@@ -3225,7 +2875,7 @@ void ff_avg_h264_qpel8_mc33_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel8_h_lowpass_mmi(halfH, src + stride, 8, stride);
     copy_block8_mmi(full, src - stride*2 + 1, 8,  stride, 13);
     put_h264_qpel8_v_lowpass_mmi(halfV, full_mid, 8, 8);
-    avg_pixels8_l2_mmi(dst, halfH, halfV, stride, 8, 8, 8);
+    ff_avg_pixels8_l2_8_mmi(dst, halfH, halfV, stride, 8, 8, 8);
 }
 
 void ff_avg_h264_qpel8_mc22_mmi(uint8_t *dst, const uint8_t *src,
@@ -3284,7 +2934,7 @@ void ff_avg_h264_qpel8_mc32_mmi(uint8_t *dst, const uint8_t *src,
 void ff_put_h264_qpel16_mc00_mmi(uint8_t *dst, const uint8_t *src,
         ptrdiff_t stride)
 {
-    put_pixels16_mmi(dst, src, stride, 16);
+    ff_put_pixels16_8_mmi(dst, src, stride, 16);
 }
 
 void ff_put_h264_qpel16_mc10_mmi(uint8_t *dst, const uint8_t *src,
@@ -3292,7 +2942,7 @@ void ff_put_h264_qpel16_mc10_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[256];
     put_h264_qpel16_h_lowpass_mmi(half, src, 16, stride);
-    put_pixels16_l2_mmi(dst, src, half, stride, stride, 16, 16);
+    ff_put_pixels16_l2_8_mmi(dst, src, half, stride, stride, 16, 16);
 }
 
 void ff_put_h264_qpel16_mc20_mmi(uint8_t *dst, const uint8_t *src,
@@ -3306,7 +2956,7 @@ void ff_put_h264_qpel16_mc30_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[256];
     put_h264_qpel16_h_lowpass_mmi(half, src, 16, stride);
-    put_pixels16_l2_mmi(dst, src+1, half, stride, stride, 16, 16);
+    ff_put_pixels16_l2_8_mmi(dst, src+1, half, stride, stride, 16, 16);
 }
 
 void ff_put_h264_qpel16_mc01_mmi(uint8_t *dst, const uint8_t *src,
@@ -3317,7 +2967,7 @@ void ff_put_h264_qpel16_mc01_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[256];
     copy_block16_mmi(full, src - stride*2, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(half, full_mid, 16, 16);
-    put_pixels16_l2_mmi(dst, full_mid, half, stride, 16, 16, 16);
+    ff_put_pixels16_l2_8_mmi(dst, full_mid, half, stride, 16, 16, 16);
 }
 
 void ff_put_h264_qpel16_mc02_mmi(uint8_t *dst, const uint8_t *src,
@@ -3337,7 +2987,7 @@ void ff_put_h264_qpel16_mc03_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[256];
     copy_block16_mmi(full, src - stride*2, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(half, full_mid, 16, 16);
-    put_pixels16_l2_mmi(dst, full_mid+16, half, stride, 16, 16, 16);
+    ff_put_pixels16_l2_8_mmi(dst, full_mid+16, half, stride, 16, 16, 16);
 }
 
 void ff_put_h264_qpel16_mc11_mmi(uint8_t *dst, const uint8_t *src,
@@ -3350,7 +3000,7 @@ void ff_put_h264_qpel16_mc11_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel16_h_lowpass_mmi(halfH, src, 16, stride);
     copy_block16_mmi(full, src - stride*2, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(halfV, full_mid, 16, 16);
-    put_pixels16_l2_mmi(dst, halfH, halfV, stride, 16, 16, 16);
+    ff_put_pixels16_l2_8_mmi(dst, halfH, halfV, stride, 16, 16, 16);
 }
 
 void ff_put_h264_qpel16_mc31_mmi(uint8_t *dst, const uint8_t *src,
@@ -3363,7 +3013,7 @@ void ff_put_h264_qpel16_mc31_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel16_h_lowpass_mmi(halfH, src, 16, stride);
     copy_block16_mmi(full, src - stride*2 + 1, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(halfV, full_mid, 16, 16);
-    put_pixels16_l2_mmi(dst, halfH, halfV, stride, 16, 16, 16);
+    ff_put_pixels16_l2_8_mmi(dst, halfH, halfV, stride, 16, 16, 16);
 }
 
 void ff_put_h264_qpel16_mc13_mmi(uint8_t *dst, const uint8_t *src,
@@ -3376,7 +3026,7 @@ void ff_put_h264_qpel16_mc13_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel16_h_lowpass_mmi(halfH, src + stride, 16, stride);
     copy_block16_mmi(full, src - stride*2, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(halfV, full_mid, 16, 16);
-    put_pixels16_l2_mmi(dst, halfH, halfV, stride, 16, 16, 16);
+    ff_put_pixels16_l2_8_mmi(dst, halfH, halfV, stride, 16, 16, 16);
 }
 
 void ff_put_h264_qpel16_mc33_mmi(uint8_t *dst, const uint8_t *src,
@@ -3389,7 +3039,7 @@ void ff_put_h264_qpel16_mc33_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel16_h_lowpass_mmi(halfH, src + stride, 16, stride);
     copy_block16_mmi(full, src - stride*2 + 1, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(halfV, full_mid, 16, 16);
-    put_pixels16_l2_mmi(dst, halfH, halfV, stride, 16, 16, 16);
+    ff_put_pixels16_l2_8_mmi(dst, halfH, halfV, stride, 16, 16, 16);
 }
 
 void ff_put_h264_qpel16_mc22_mmi(uint8_t *dst, const uint8_t *src,
@@ -3448,7 +3098,7 @@ void ff_put_h264_qpel16_mc32_mmi(uint8_t *dst, const uint8_t *src,
 void ff_avg_h264_qpel16_mc00_mmi(uint8_t *dst, const uint8_t *src,
         ptrdiff_t stride)
 {
-    avg_pixels16_mmi(dst, src, stride, 16);
+    ff_avg_pixels16_8_mmi(dst, src, stride, 16);
 }
 
 void ff_avg_h264_qpel16_mc10_mmi(uint8_t *dst, const uint8_t *src,
@@ -3456,7 +3106,7 @@ void ff_avg_h264_qpel16_mc10_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[256];
     put_h264_qpel16_h_lowpass_mmi(half, src, 16, stride);
-    avg_pixels16_l2_mmi(dst, src, half, stride, stride, 16, 16);
+    ff_avg_pixels16_l2_8_mmi(dst, src, half, stride, stride, 16, 16);
 }
 
 void ff_avg_h264_qpel16_mc20_mmi(uint8_t *dst, const uint8_t *src,
@@ -3470,7 +3120,7 @@ void ff_avg_h264_qpel16_mc30_mmi(uint8_t *dst, const uint8_t *src,
 {
     uint8_t half[256];
     put_h264_qpel16_h_lowpass_mmi(half, src, 16, stride);
-    avg_pixels16_l2_mmi(dst, src+1, half, stride, stride, 16, 16);
+    ff_avg_pixels16_l2_8_mmi(dst, src+1, half, stride, stride, 16, 16);
 }
 
 void ff_avg_h264_qpel16_mc01_mmi(uint8_t *dst, const uint8_t *src,
@@ -3481,7 +3131,7 @@ void ff_avg_h264_qpel16_mc01_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[256];
     copy_block16_mmi(full, src - stride*2, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(half, full_mid, 16, 16);
-    avg_pixels16_l2_mmi(dst, full_mid, half, stride, 16, 16, 16);
+    ff_avg_pixels16_l2_8_mmi(dst, full_mid, half, stride, 16, 16, 16);
 }
 
 void ff_avg_h264_qpel16_mc02_mmi(uint8_t *dst, const uint8_t *src,
@@ -3501,7 +3151,7 @@ void ff_avg_h264_qpel16_mc03_mmi(uint8_t *dst, const uint8_t *src,
     uint8_t half[256];
     copy_block16_mmi(full, src - stride*2, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(half, full_mid, 16, 16);
-    avg_pixels16_l2_mmi(dst, full_mid+16, half, stride, 16, 16, 16);
+    ff_avg_pixels16_l2_8_mmi(dst, full_mid+16, half, stride, 16, 16, 16);
 }
 
 void ff_avg_h264_qpel16_mc11_mmi(uint8_t *dst, const uint8_t *src,
@@ -3514,7 +3164,7 @@ void ff_avg_h264_qpel16_mc11_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel16_h_lowpass_mmi(halfH, src, 16, stride);
     copy_block16_mmi(full, src - stride*2, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(halfV, full_mid, 16, 16);
-    avg_pixels16_l2_mmi(dst, halfH, halfV, stride, 16, 16, 16);
+    ff_avg_pixels16_l2_8_mmi(dst, halfH, halfV, stride, 16, 16, 16);
 }
 
 void ff_avg_h264_qpel16_mc31_mmi(uint8_t *dst, const uint8_t *src,
@@ -3527,7 +3177,7 @@ void ff_avg_h264_qpel16_mc31_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel16_h_lowpass_mmi(halfH, src, 16, stride);
     copy_block16_mmi(full, src - stride*2 + 1, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(halfV, full_mid, 16, 16);
-    avg_pixels16_l2_mmi(dst, halfH, halfV, stride, 16, 16, 16);
+    ff_avg_pixels16_l2_8_mmi(dst, halfH, halfV, stride, 16, 16, 16);
 }
 
 void ff_avg_h264_qpel16_mc13_mmi(uint8_t *dst, const uint8_t *src,
@@ -3540,7 +3190,7 @@ void ff_avg_h264_qpel16_mc13_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel16_h_lowpass_mmi(halfH, src + stride, 16, stride);
     copy_block16_mmi(full, src - stride*2, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(halfV, full_mid, 16, 16);
-    avg_pixels16_l2_mmi(dst, halfH, halfV, stride, 16, 16, 16);
+    ff_avg_pixels16_l2_8_mmi(dst, halfH, halfV, stride, 16, 16, 16);
 }
 
 void ff_avg_h264_qpel16_mc33_mmi(uint8_t *dst, const uint8_t *src,
@@ -3553,7 +3203,7 @@ void ff_avg_h264_qpel16_mc33_mmi(uint8_t *dst, const uint8_t *src,
     put_h264_qpel16_h_lowpass_mmi(halfH, src + stride, 16, stride);
     copy_block16_mmi(full, src - stride*2 + 1, 16,  stride, 21);
     put_h264_qpel16_v_lowpass_mmi(halfV, full_mid, 16, 16);
-    avg_pixels16_l2_mmi(dst, halfH, halfV, stride, 16, 16, 16);
+    ff_avg_pixels16_l2_8_mmi(dst, halfH, halfV, stride, 16, 16, 16);
 }
 
 void ff_avg_h264_qpel16_mc22_mmi(uint8_t *dst, const uint8_t *src,
