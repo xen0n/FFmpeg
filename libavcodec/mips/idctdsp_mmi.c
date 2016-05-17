@@ -191,7 +191,7 @@ void ff_add_pixels_clamped_mmi(const int16_t *block,
         "packushb   %[ftmp3],   %[ftmp3],       %[ftmp4]                \n\t"
         "sdc1       %[ftmp1],   0x00(%[pixels])                         \n\t"
         "gssdxc1    %[ftmp3],   0x00(%[pixels], %[line_size])           \n\t"
-        "addi       %[tmp0],    %[tmp0],       -0x01                    \n\t"
+        "addi       %[tmp0],    %[tmp0],        -0x01                   \n\t"
         PTR_ADDIU  "%[block],   %[block],       0x20                    \n\t"
         PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
         PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
