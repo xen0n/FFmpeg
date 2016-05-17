@@ -23,7 +23,9 @@
  */
 
 #include "h264pred_mips.h"
+#include "libavcodec/bit_depth_template.c"
 #include "libavutil/mips/asmdefs.h"
+#include "constants.h"
 
 void ff_pred16x16_vertical_8_mmi(uint8_t *src, ptrdiff_t stride)
 {
@@ -179,22 +181,22 @@ void ff_pred8x8l_top_dc_8_mmi(uint8_t *src, int has_topleft,
 
         "1:                                                             \n\t"
         "bnez       %[has_topright],            2f                      \n\t"
-        "pinsrh_3   %[ftmp2],   %[ftmp2],        %[ftmp4]               \n\t"
+        "pinsrh_3   %[ftmp2],   %[ftmp2],       %[ftmp4]                \n\t"
 
         "2:                                                             \n\t"
         "dli        %[tmp0],    0x02                                    \n\t"
         "mtc1       %[tmp0],    %[ftmp1]                                \n\t"
-        "pmullh     %[ftmp5],   %[ftmp5],        %[ff_pw_2]             \n\t"
-        "pmullh     %[ftmp4],   %[ftmp4],        %[ff_pw_2]             \n\t"
-        "paddh      %[ftmp7],   %[ftmp7],        %[ftmp5]               \n\t"
-        "paddh      %[ftmp6],   %[ftmp6],        %[ftmp4]               \n\t"
-        "paddh      %[ftmp7],   %[ftmp7],        %[ftmp3]               \n\t"
-        "paddh      %[ftmp6],   %[ftmp6],        %[ftmp2]               \n\t"
-        "paddh      %[ftmp7],   %[ftmp7],        %[ff_pw_2]             \n\t"
-        "paddh      %[ftmp6],   %[ftmp6],        %[ff_pw_2]             \n\t"
-        "psrah      %[ftmp7],   %[ftmp7],        %[ftmp1]               \n\t"
-        "psrah      %[ftmp6],   %[ftmp6],        %[ftmp1]               \n\t"
-        "packushb   %[ftmp9],   %[ftmp7],        %[ftmp6]               \n\t"
+        "pmullh     %[ftmp5],   %[ftmp5],       %[ff_pw_2]              \n\t"
+        "pmullh     %[ftmp4],   %[ftmp4],       %[ff_pw_2]              \n\t"
+        "paddh      %[ftmp7],   %[ftmp7],       %[ftmp5]                \n\t"
+        "paddh      %[ftmp6],   %[ftmp6],       %[ftmp4]                \n\t"
+        "paddh      %[ftmp7],   %[ftmp7],       %[ftmp3]                \n\t"
+        "paddh      %[ftmp6],   %[ftmp6],       %[ftmp2]                \n\t"
+        "paddh      %[ftmp7],   %[ftmp7],       %[ff_pw_2]              \n\t"
+        "paddh      %[ftmp6],   %[ftmp6],       %[ff_pw_2]              \n\t"
+        "psrah      %[ftmp7],   %[ftmp7],       %[ftmp1]                \n\t"
+        "psrah      %[ftmp6],   %[ftmp6],       %[ftmp1]                \n\t"
+        "packushb   %[ftmp9],   %[ftmp7],       %[ftmp6]                \n\t"
         "biadd      %[ftmp10],  %[ftmp9]                                \n\t"
         "mfc1       %[tmp1],    %[ftmp10]                               \n\t"
         "addiu      %[tmp1],    %[tmp1],        0x04                    \n\t"
@@ -222,12 +224,12 @@ void ff_pred8x8l_top_dc_8_mmi(uint8_t *src, int has_topleft,
         "1:                                                             \n\t"
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
-        "gssdxc1    %[ftmp0],   0x00(%[src], %[stride])                 \n\t"
+        "gssdxc1    %[ftmp0],   0x00(%[src],    %[stride])              \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
-        "gssdxc1    %[ftmp0],   0x00(%[src], %[stride])                 \n\t"
+        "gssdxc1    %[ftmp0],   0x00(%[src],    %[stride])              \n\t"
         "daddi      %[tmp0],    %[tmp0],        -0x01                   \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
@@ -324,12 +326,12 @@ void ff_pred8x8l_dc_8_mmi(uint8_t *src, int has_topleft, int has_topright,
         "1:                                                             \n\t"
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
-        "gssdxc1    %[ftmp0],   0x00(%[src], %[stride])                 \n\t"
+        "gssdxc1    %[ftmp0],   0x00(%[src],    %[stride])              \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
-        "gssdxc1    %[ftmp0],   0x00(%[src], %[stride])                 \n\t"
+        "gssdxc1    %[ftmp0],   0x00(%[src],    %[stride])              \n\t"
         "daddi      %[tmp0],    %[tmp0],        -0x01                   \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
@@ -436,13 +438,13 @@ void ff_pred4x4_dc_8_mmi(uint8_t *src, const uint8_t *topright,
         PTR_ADDU   "%[tmp0],    %[dc],          $0                      \n\t"
         "dmul       %[tmp1],    %[tmp0],        %[ff_pb_1]              \n\t"
         "xor        %[addr0],   %[addr0],       %[addr0]                \n\t"
-        "gsswx      %[tmp1],    0x00(%[src],%[addr0])                   \n\t"
+        "gsswx      %[tmp1],    0x00(%[src],    %[addr0])               \n\t"
         PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
-        "gsswx      %[tmp1],    0x00(%[src],%[addr0])                   \n\t"
+        "gsswx      %[tmp1],    0x00(%[src],    %[addr0])               \n\t"
         PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
-        "gsswx      %[tmp1],    0x00(%[src],%[addr0])                   \n\t"
+        "gsswx      %[tmp1],    0x00(%[src],    %[addr0])               \n\t"
         PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
-        "gsswx      %[tmp1],    0x00(%[src],%[addr0])                   \n\t"
+        "gsswx      %[tmp1],    0x00(%[src],    %[addr0])               \n\t"
         : [tmp0]"=&r"(tmp[0]),              [tmp1]"=&r"(tmp[1]),
           [addr0]"=&r"(addr[0])
         : [src]"r"((mips_reg)src),          [stride]"r"((mips_reg)stride),
@@ -739,4 +741,252 @@ void ff_pred8x16_horizontal_8_mmi(uint8_t *src, ptrdiff_t stride)
           [ff_pb_1]"r"(ff_pb_1)
         : "memory"
     );
+}
+
+static inline void pred16x16_plane_compat_mmi(uint8_t *src, int stride,
+        const int svq3, const int rv40)
+{
+    double ftmp[11];
+    uint64_t tmp[7];
+    mips_reg addr[1];
+
+    __asm__ volatile(
+        PTR_SUBU   "%[addr0],   %[src],         %[stride]               \n\t"
+        "dli        %[tmp2],    0x20                                    \n\t"
+        "dmtc1      %[tmp2],    %[ftmp4]                                \n\t"
+        "gsldlc1    %[ftmp0],   0x06(%[addr0])                          \n\t"
+        "gsldlc1    %[ftmp2],   0x0f(%[addr0])                          \n\t"
+        "gsldrc1    %[ftmp0],   -0x01(%[addr0])                         \n\t"
+        "gsldrc1    %[ftmp2],   0x08(%[addr0])                          \n\t"
+        "dsrl       %[ftmp1],   %[ftmp0],       %[ftmp4]                \n\t"
+        "dsrl       %[ftmp3],   %[ftmp2],       %[ftmp4]                \n\t"
+        "xor        %[ftmp4],   %[ftmp4],       %[ftmp4]                \n\t"
+        "punpcklbh  %[ftmp0],   %[ftmp0],       %[ftmp4]                \n\t"
+        "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp4]                \n\t"
+        "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp4]                \n\t"
+        "punpcklbh  %[ftmp3],   %[ftmp3],       %[ftmp4]                \n\t"
+        "pmullh     %[ftmp0],   %[ftmp0],       %[ff_pw_m8tom5]         \n\t"
+        "pmullh     %[ftmp1],   %[ftmp1],       %[ff_pw_m4tom1]         \n\t"
+        "pmullh     %[ftmp2],   %[ftmp2],       %[ff_pw_1to4]           \n\t"
+        "pmullh     %[ftmp3],   %[ftmp3],       %[ff_pw_5to8]           \n\t"
+        "paddsh     %[ftmp0],   %[ftmp0],       %[ftmp2]                \n\t"
+        "paddsh     %[ftmp1],   %[ftmp1],       %[ftmp3]                \n\t"
+        "paddsh     %[ftmp0],   %[ftmp0],       %[ftmp1]                \n\t"
+        "dli        %[tmp2],    0x0e                                    \n\t"
+        "dmtc1      %[tmp2],    %[ftmp4]                                \n\t"
+        "pshufh     %[ftmp1],   %[ftmp0],       %[ftmp4]                \n\t"
+        "paddsh     %[ftmp0],   %[ftmp0],       %[ftmp1]                \n\t"
+        "dli        %[tmp2],    0x01                                    \n\t"
+        "dmtc1      %[tmp2],    %[ftmp4]                                \n\t"
+        "pshufh     %[ftmp1],   %[ftmp0],       %[ftmp4]                \n\t"
+        "paddsh     %[ftmp5],   %[ftmp0],       %[ftmp1]                \n\t"
+
+        PTR_ADDIU  "%[addr0],   %[src],         -0x01                   \n\t"
+        PTR_SUBU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp2],    0x00(%[addr0])                          \n\t"
+        "lbu        %[tmp6],    0x10(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp3],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp4],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp5],    0x00(%[addr0])                          \n\t"
+        "dsll       %[tmp3],    %[tmp3],        0x10                    \n\t"
+        "dsll       %[tmp4],    %[tmp4],        0x20                    \n\t"
+        "dsll       %[tmp5],    %[tmp5],        0x30                    \n\t"
+        "or         %[tmp4],    %[tmp4],        %[tmp5]                 \n\t"
+        "or         %[tmp2],    %[tmp2],        %[tmp3]                 \n\t"
+        "or         %[tmp2],    %[tmp2],        %[tmp4]                 \n\t"
+        "dmtc1      %[tmp2],    %[ftmp0]                                \n\t"
+
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp2],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp3],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp4],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp5],    0x00(%[addr0])                          \n\t"
+        "dsll       %[tmp3],    %[tmp3],        0x10                    \n\t"
+        "dsll       %[tmp4],    %[tmp4],        0x20                    \n\t"
+        "dsll       %[tmp5],    %[tmp5],        0x30                    \n\t"
+        "or         %[tmp4],    %[tmp4],        %[tmp5]                 \n\t"
+        "or         %[tmp2],    %[tmp2],        %[tmp3]                 \n\t"
+        "or         %[tmp2],    %[tmp2],        %[tmp4]                 \n\t"
+        "dmtc1      %[tmp2],    %[ftmp1]                                \n\t"
+
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp2],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp3],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp4],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp5],    0x00(%[addr0])                          \n\t"
+        "dsll       %[tmp3],    %[tmp3],        0x10                    \n\t"
+        "dsll       %[tmp4],    %[tmp4],        0x20                    \n\t"
+        "dsll       %[tmp5],    %[tmp5],        0x30                    \n\t"
+        "or         %[tmp4],    %[tmp4],        %[tmp5]                 \n\t"
+        "or         %[tmp2],    %[tmp2],        %[tmp3]                 \n\t"
+        "or         %[tmp2],    %[tmp2],        %[tmp4]                 \n\t"
+        "dmtc1      %[tmp2],    %[ftmp2]                                \n\t"
+
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp2],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp3],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp4],    0x00(%[addr0])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "lbu        %[tmp5],    0x00(%[addr0])                          \n\t"
+        "daddu      %[tmp6],    %[tmp6],        %[tmp5]                 \n\t"
+        "daddiu     %[tmp6],    %[tmp6],        0x01                    \n\t"
+        "dsll       %[tmp6],    %[tmp6],        0x04                    \n\t"
+
+        "dsll       %[tmp3],    %[tmp3],        0x10                    \n\t"
+        "dsll       %[tmp4],    %[tmp4],        0x20                    \n\t"
+        "dsll       %[tmp5],    %[tmp5],        0x30                    \n\t"
+        "or         %[tmp4],    %[tmp4],        %[tmp5]                 \n\t"
+        "or         %[tmp2],    %[tmp2],        %[tmp3]                 \n\t"
+        "or         %[tmp2],    %[tmp2],        %[tmp4]                 \n\t"
+        "dmtc1      %[tmp2],    %[ftmp3]                                \n\t"
+
+        "pmullh     %[ftmp0],   %[ftmp0],       %[ff_pw_m8tom5]         \n\t"
+        "pmullh     %[ftmp1],   %[ftmp1],       %[ff_pw_m4tom1]         \n\t"
+        "pmullh     %[ftmp2],   %[ftmp2],       %[ff_pw_1to4]           \n\t"
+        "pmullh     %[ftmp3],   %[ftmp3],       %[ff_pw_5to8]           \n\t"
+        "paddsh     %[ftmp0],   %[ftmp0],       %[ftmp2]                \n\t"
+        "paddsh     %[ftmp1],   %[ftmp1],       %[ftmp3]                \n\t"
+        "paddsh     %[ftmp0],   %[ftmp0],       %[ftmp1]                \n\t"
+        "dli        %[tmp2],    0x0e                                    \n\t"
+        "dmtc1      %[tmp2],    %[ftmp4]                                \n\t"
+        "pshufh     %[ftmp1],   %[ftmp0],       %[ftmp4]                \n\t"
+        "paddsh     %[ftmp0],   %[ftmp0],       %[ftmp1]                \n\t"
+
+        "dli        %[tmp2],    0x01                                    \n\t"
+        "dmtc1      %[tmp2],    %[ftmp4]                                \n\t"
+        "pshufh     %[ftmp1],   %[ftmp0],       %[ftmp4]                \n\t"
+        "paddsh     %[ftmp6],   %[ftmp0],       %[ftmp1]                \n\t"
+
+        "dmfc1      %[tmp0],    %[ftmp5]                                \n\t"
+        "dsll       %[tmp0],    %[tmp0],        0x30                    \n\t"
+        "dsra       %[tmp0],    %[tmp0],        0x30                    \n\t"
+        "dmfc1      %[tmp1],    %[ftmp6]                                \n\t"
+        "dsll       %[tmp1],    %[tmp1],        0x30                    \n\t"
+        "dsra       %[tmp1],    %[tmp1],        0x30                    \n\t"
+
+        "beqz       %[svq3],    1f                                      \n\t"
+        "dli        %[tmp2],    0x04                                    \n\t"
+        "ddiv       %[tmp0],    %[tmp0],        %[tmp2]                 \n\t"
+        "ddiv       %[tmp1],    %[tmp1],        %[tmp2]                 \n\t"
+        "dli        %[tmp2],    0x05                                    \n\t"
+        "dmul       %[tmp0],    %[tmp0],        %[tmp2]                 \n\t"
+        "dmul       %[tmp1],    %[tmp1],        %[tmp2]                 \n\t"
+        "dli        %[tmp2],    0x10                                    \n\t"
+        "ddiv       %[tmp0],    %[tmp0],        %[tmp2]                 \n\t"
+        "ddiv       %[tmp1],    %[tmp1],        %[tmp2]                 \n\t"
+        "daddu      %[tmp2],    %[tmp0],        $0                      \n\t"
+        "daddu      %[tmp0],    %[tmp1],        $0                      \n\t"
+        "daddu      %[tmp1],    %[tmp2],        $0                      \n\t"
+        "b          2f                                                  \n\t"
+
+        "1:                                                             \n\t"
+        "beqz       %[rv40],    1f                                      \n\t"
+        "dsra       %[tmp2],    %[tmp0],        0x02                    \n\t"
+        "daddu      %[tmp0],    %[tmp0],        %[tmp2]                 \n\t"
+        "dsra       %[tmp2],    %[tmp1],        0x02                    \n\t"
+        "daddu      %[tmp1],    %[tmp1],        %[tmp2]                 \n\t"
+        "dsra       %[tmp0],    %[tmp0],        0x04                    \n\t"
+        "dsra       %[tmp1],    %[tmp1],        0x04                    \n\t"
+        "b          2f                                                  \n\t"
+
+        "1:                                                             \n\t"
+        "dli        %[tmp2],    0x05                                    \n\t"
+        "dmul       %[tmp0],    %[tmp0],        %[tmp2]                 \n\t"
+        "dmul       %[tmp1],    %[tmp1],        %[tmp2]                 \n\t"
+        "daddiu     %[tmp0],    %[tmp0],        0x20                    \n\t"
+        "daddiu     %[tmp1],    %[tmp1],        0x20                    \n\t"
+        "dsra       %[tmp0],    %[tmp0],        0x06                    \n\t"
+        "dsra       %[tmp1],    %[tmp1],        0x06                    \n\t"
+
+        "2:                                                             \n\t"
+        "daddu      %[tmp3],    %[tmp0],        %[tmp1]                 \n\t"
+        "dli        %[tmp2],    0x07                                    \n\t"
+        "dmul       %[tmp3],    %[tmp3],        %[tmp2]                 \n\t"
+        "dsubu      %[tmp6],    %[tmp6],        %[tmp3]                 \n\t"
+
+        "xor        %[ftmp4],   %[ftmp4],       %[ftmp4]                \n\t"
+        "dmtc1      %[tmp0],    %[ftmp0]                                \n\t"
+        "pshufh     %[ftmp0],   %[ftmp0],       %[ftmp4]                \n\t"
+        "dmtc1      %[tmp1],    %[ftmp5]                                \n\t"
+        "pshufh     %[ftmp5],   %[ftmp5],       %[ftmp4]                \n\t"
+        "dmtc1      %[tmp6],    %[ftmp6]                                \n\t"
+        "pshufh     %[ftmp6],   %[ftmp6],       %[ftmp4]                \n\t"
+        "dli        %[tmp2],    0x05                                    \n\t"
+        "dmtc1      %[tmp2],    %[ftmp7]                                \n\t"
+        "pmullh     %[ftmp1],   %[ff_pw_0to3],  %[ftmp0]                \n\t"
+        "dmtc1      %[ff_pw_4to7],              %[ftmp2]                \n\t"
+        "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
+        "dmtc1      %[ff_pw_8tob],              %[ftmp3]                \n\t"
+        "pmullh     %[ftmp3],   %[ftmp3],       %[ftmp0]                \n\t"
+        "dmtc1      %[ff_pw_ctof],              %[ftmp4]                \n\t"
+        "pmullh     %[ftmp4],   %[ftmp4],       %[ftmp0]                \n\t"
+
+        "dli        %[tmp0],    0x10                                    \n\t"
+        PTR_ADDU   "%[addr0],   %[src],         $0                      \n\t"
+        "1:                                                             \n\t"
+        "paddsh     %[ftmp8],   %[ftmp1],       %[ftmp6]                \n\t"
+        "psrah      %[ftmp8],   %[ftmp8],       %[ftmp7]                \n\t"
+        "paddsh     %[ftmp9],   %[ftmp2],       %[ftmp6]                \n\t"
+        "psrah      %[ftmp9],   %[ftmp9],       %[ftmp7]                \n\t"
+        "packushb   %[ftmp0],   %[ftmp8],       %[ftmp9]                \n\t"
+        "gssdlc1    %[ftmp0],   0x07(%[addr0])                          \n\t"
+        "gssdrc1    %[ftmp0],   0x00(%[addr0])                          \n\t"
+
+        "paddsh     %[ftmp8],   %[ftmp3],       %[ftmp6]                \n\t"
+        "psrah      %[ftmp8],   %[ftmp8],       %[ftmp7]                \n\t"
+        "paddsh     %[ftmp9],   %[ftmp4],       %[ftmp6]                \n\t"
+        "psrah      %[ftmp9],   %[ftmp9],       %[ftmp7]                \n\t"
+        "packushb   %[ftmp0],   %[ftmp8],       %[ftmp9]                \n\t"
+        "gssdlc1    %[ftmp0],   0x0f(%[addr0])                          \n\t"
+        "gssdrc1    %[ftmp0],   0x08(%[addr0])                          \n\t"
+
+        "paddsh     %[ftmp6],   %[ftmp6],       %[ftmp5]                \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        "daddiu     %[tmp0],    %[tmp0],        -0x01                   \n\t"
+        "bnez       %[tmp0],    1b                                      \n\t"
+        : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
+          [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
+          [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
+          [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
+          [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
+          [tmp0]"=&r"(tmp[0]),              [tmp1]"=&r"(tmp[1]),
+          [tmp2]"=&r"(tmp[2]),              [tmp3]"=&r"(tmp[3]),
+          [tmp4]"=&r"(tmp[4]),              [tmp5]"=&r"(tmp[5]),
+          [tmp6]"=&r"(tmp[6]),
+          [addr0]"=&r"(addr[0])
+        : [src]"r"(src),                    [stride]"r"((mips_reg)stride),
+          [svq3]"r"(svq3),                  [rv40]"r"(rv40),
+          [ff_pw_m8tom5]"f"(ff_pw_m8tom5),  [ff_pw_m4tom1]"f"(ff_pw_m4tom1),
+          [ff_pw_1to4]"f"(ff_pw_1to4),      [ff_pw_5to8]"f"(ff_pw_5to8),
+          [ff_pw_0to3]"f"(ff_pw_0to3),      [ff_pw_4to7]"r"(ff_pw_4to7),
+          [ff_pw_8tob]"r"(ff_pw_8tob),      [ff_pw_ctof]"r"(ff_pw_ctof)
+        : "memory"
+    );
+}
+
+void ff_pred16x16_plane_h264_8_mmi(uint8_t *src, ptrdiff_t stride)
+{
+    pred16x16_plane_compat_mmi(src, stride, 0, 0);
+}
+
+void ff_pred16x16_plane_svq3_8_mmi(uint8_t *src, ptrdiff_t stride)
+{
+    pred16x16_plane_compat_mmi(src, stride, 1, 0);
+}
+
+void ff_pred16x16_plane_rv40_8_mmi(uint8_t *src, ptrdiff_t stride)
+{
+    pred16x16_plane_compat_mmi(src, stride, 0, 1);
 }
