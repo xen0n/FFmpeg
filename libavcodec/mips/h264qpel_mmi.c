@@ -1901,9 +1901,9 @@ static void put_pixels8_l2_shift5_mmi(uint8_t *dst, int16_t *src16,
             : "memory"
         );
 
-        src8  += 2L * src8Stride;
+        src8  += 2 * src8Stride;
         src16 += 48;
-        dst   += 2L * dstStride;
+        dst   += 2 * dstStride;
     } while (h -= 2);
 }
 
@@ -2260,9 +2260,9 @@ static void avg_pixels8_l2_shift5_mmi(uint8_t *dst, int16_t *src16,
             : "memory"
         );
 
-        src8  += 2L * src8Stride;
+        src8  += 2 * src8Stride;
         src16 += 48;
-        dst   += 2L * dstStride;
+        dst   += 2 * dstStride;
     } while (b -= 2);
 }
 
