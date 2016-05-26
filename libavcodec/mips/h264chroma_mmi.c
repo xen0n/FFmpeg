@@ -37,6 +37,7 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
     double ftmp[10];
     uint64_t tmp[1];
     mips_reg addr[1];
+    uint64_t all64;
 
     if (D) {
         __asm__ volatile (
@@ -49,6 +50,7 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pshufh     %[D],       %[D],           %[ftmp0]            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[stride]           \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp2],   0x08(%[src])                        \n\t"
@@ -57,6 +59,16 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "gsldrc1    %[ftmp3],   0x00(%[addr0])                      \n\t"
             "gsldlc1    %[ftmp4],   0x08(%[addr0])                      \n\t"
             "gsldrc1    %[ftmp4],   0x01(%[addr0])                      \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+            "uld        %[all64],   0x00(%[addr0])                      \n\t"
+            "dmtc1      %[all64],   %[ftmp3]                            \n\t"
+            "uld        %[all64],   0x01(%[addr0])                      \n\t"
+            "dmtc1      %[all64],   %[ftmp4]                            \n\t"
+#endif
 
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp6],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -99,6 +111,7 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
               [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst),              [src]"+&r"(src),
               [h]"+&r"(h)
             : [stride]"r"((mips_reg)stride),[ff_pw_32]"f"(ff_pw_32),
@@ -117,10 +130,17 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "mtc1       %[tmp0],    %[ftmp7]                            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[step]             \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp2],   0x07(%[addr0])                      \n\t"
             "gsldrc1    %[ftmp2],   0x00(%[addr0])                      \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x00(%[addr0])                      \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+#endif
 
             "punpcklbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp4],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -149,6 +169,7 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst),              [src]"+&r"(src),
               [h]"+&r"(h)
             : [stride]"r"((mips_reg)stride),[step]"r"((mips_reg)step),
@@ -163,8 +184,13 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "mtc1       %[tmp0],    %[ftmp4]                            \n\t"
             "1:                                                         \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
@@ -178,8 +204,13 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "sdc1       %[ftmp1],   0x00(%[dst])                        \n\t"
 
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
@@ -199,6 +230,7 @@ void ff_put_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
               [tmp0]"=&r"(tmp[0]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst),              [src]"+&r"(src),
               [h]"+&r"(h)
             : [stride]"r"((mips_reg)stride),[ff_pw_32]"f"(ff_pw_32),
@@ -219,6 +251,7 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
     double ftmp[10];
     uint64_t tmp[1];
     mips_reg addr[1];
+    uint64_t all64;
 
     if (D) {
         __asm__ volatile (
@@ -231,6 +264,7 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pshufh     %[D],       %[D],           %[ftmp0]            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[stride]           \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp2],   0x08(%[src])                        \n\t"
@@ -239,6 +273,16 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "gsldrc1    %[ftmp3],   0x00(%[addr0])                      \n\t"
             "gsldlc1    %[ftmp4],   0x08(%[addr0])                      \n\t"
             "gsldrc1    %[ftmp4],   0x01(%[addr0])                      \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+            "uld        %[all64],   0x00(%[addr0])                      \n\t"
+            "dmtc1      %[all64],   %[ftmp3]                            \n\t"
+            "uld        %[all64],   0x01(%[addr0])                      \n\t"
+            "dmtc1      %[all64],   %[ftmp4]                            \n\t"
+#endif
 
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp6],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -283,6 +327,7 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
               [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst),              [src]"+&r"(src),
               [h]"+&r"(h)
             : [stride]"r"((mips_reg)stride),[ff_pw_32]"f"(ff_pw_32),
@@ -301,10 +346,17 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "mtc1       %[tmp0],    %[ftmp7]                            \n\t"
             "1:                                                         \n\t"
             PTR_ADDU   "%[addr0],   %[src],         %[step]             \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp2],   0x07(%[addr0])                      \n\t"
             "gsldrc1    %[ftmp2],   0x00(%[addr0])                      \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x00(%[addr0])                      \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+#endif
 
             "punpcklbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp4],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -335,6 +387,7 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [tmp0]"=&r"(tmp[0]),
               [addr0]"=&r"(addr[0]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst),              [src]"+&r"(src),
               [h]"+&r"(h)
             : [stride]"r"((mips_reg)stride),[step]"r"((mips_reg)step),
@@ -349,8 +402,13 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "pshufh     %[A],       %[A],           %[ftmp0]            \n\t"
             "mtc1       %[tmp0],    %[ftmp4]                            \n\t"
             "1:                                                         \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
@@ -366,8 +424,13 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
             "sdc1       %[ftmp1],   0x00(%[dst])                        \n\t"
             PTR_ADDU   "%[dst],     %[dst],         %[stride]           \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp1],   %[ftmp2],       %[A]                \n\t"
@@ -389,6 +452,7 @@ void ff_avg_h264_chroma_mc8_mmi(uint8_t *dst, uint8_t *src, int stride,
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
               [tmp0]"=&r"(tmp[0]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst),              [src]"+&r"(src),
               [h]"+&r"(h)
             : [stride]"r"((mips_reg)stride),[ff_pw_32]"f"(ff_pw_32),
