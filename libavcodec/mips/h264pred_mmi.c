@@ -31,14 +31,23 @@ void ff_pred16x16_vertical_8_mmi(uint8_t *src, ptrdiff_t stride)
 {
     double ftmp[2];
     uint64_t tmp[1];
+    uint64_t all64;
 
     __asm__ volatile (
         "dli        %[tmp0],    0x08                                    \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp0],   0x07(%[srcA])                           \n\t"
         "gsldrc1    %[ftmp0],   0x00(%[srcA])                           \n\t"
         "gsldlc1    %[ftmp1],   0x0f(%[srcA])                           \n\t"
         "gsldrc1    %[ftmp1],   0x08(%[srcA])                           \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[srcA])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp0]                                \n\t"
+        "uld        %[all64],   0x08(%[srcA])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp1]                                \n\t"
+#endif
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
         "gssdlc1    %[ftmp1],   0x0f(%[src])                            \n\t"
@@ -48,12 +57,24 @@ void ff_pred16x16_vertical_8_mmi(uint8_t *src, ptrdiff_t stride)
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
         "gssdlc1    %[ftmp1],   0x0f(%[src])                            \n\t"
         "gssdrc1    %[ftmp1],   0x08(%[src])                            \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        "dmfc1      %[all64],   %[ftmp1]                                \n\t"
+        "usd        %[all64],   0x08(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        "dmfc1      %[all64],   %[ftmp1]                                \n\t"
+        "usd        %[all64],   0x08(%[src])                            \n\t"
+#endif
         "daddi      %[tmp0],    %[tmp0],        -0x01                   \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         "bnez       %[tmp0],    1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [tmp0]"=&r"(tmp[0]),
-          [src]"+&r"(src)
+          [src]"+&r"(src),
+          [all64]"=&r"(all64)
         : [stride]"r"((mips_reg)stride),    [srcA]"r"((mips_reg)(src-stride))
         : "memory"
     );
@@ -160,15 +181,26 @@ void ff_pred8x8l_top_dc_8_mmi(uint8_t *src, int has_topleft,
     uint32_t dc;
     double ftmp[11];
     mips_reg tmp[3];
+    mips_reg addr[1];
+    uint64_t all64;
 
     __asm__ volatile (
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp10],  0x07(%[srcA])                           \n\t"
         "gsldrc1    %[ftmp10],  0x00(%[srcA])                           \n\t"
         "gsldlc1    %[ftmp9],   0x07(%[src0])                           \n\t"
         "gsldrc1    %[ftmp9],   0x00(%[src0])                           \n\t"
         "gsldlc1    %[ftmp8],   0x07(%[src1])                           \n\t"
         "gsldrc1    %[ftmp8],   0x00(%[src1])                           \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[srcA])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp10]                               \n\t"
+        "uld        %[all64],   0x00(%[src0])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp9]                                \n\t"
+        "uld        %[all64],   0x00(%[src1])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp8]                                \n\t"
+#endif
 
         "punpcklbh  %[ftmp7],   %[ftmp10],      %[ftmp0]                \n\t"
         "punpckhbh  %[ftmp6],   %[ftmp10],      %[ftmp0]                \n\t"
@@ -209,6 +241,7 @@ void ff_pred8x8l_top_dc_8_mmi(uint8_t *src, int has_topleft,
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [ftmp10]"=&f"(ftmp[10]),
           [tmp0]"=&r"(tmp[0]),              [tmp1]"=&r"(tmp[1]),
+          [all64]"=&r"(all64),
           [dc]"=r"(dc)
         : [srcA]"r"((mips_reg)(src-stride-1)),
           [src0]"r"((mips_reg)(src-stride)),
@@ -222,19 +255,37 @@ void ff_pred8x8l_top_dc_8_mmi(uint8_t *src, int has_topleft,
         "dli        %[tmp0],    0x02                                    \n\t"
         "punpcklwd  %[ftmp0],   %[dc],          %[dc]                   \n\t"
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
         "gssdxc1    %[ftmp0],   0x00(%[src],    %[stride])              \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[addr0],   %[src],         %[stride]               \n\t"
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[addr0])                          \n\t"
+#endif
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
         "gssdxc1    %[ftmp0],   0x00(%[src],    %[stride])              \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[addr0],   %[src],         %[stride]               \n\t"
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[addr0])                          \n\t"
+#endif
         "daddi      %[tmp0],    %[tmp0],        -0x01                   \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         "bnez       %[tmp0],    1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [tmp0]"=&r"(tmp[0]),
+          [addr0]"=&r"(addr[0]),
+          [all64]"=&r"(all64),
           [src]"+&r"(src)
         : [dc]"f"(dc),                      [stride]"r"((mips_reg)stride)
         : "memory"
@@ -247,6 +298,8 @@ void ff_pred8x8l_dc_8_mmi(uint8_t *src, int has_topleft, int has_topright,
     uint32_t dc, dc1, dc2;
     double ftmp[14];
     mips_reg tmp[1];
+    mips_reg addr[1];
+    uint64_t all64;
 
     const int l0 = ((has_topleft ? src[-1+-1*stride] : src[-1+0*stride]) + 2*src[-1+0*stride] + src[-1+1*stride] + 2) >> 2;
     const int l1 = (src[-1+0*stride] + 2*src[-1+1*stride] + src[-1+2*stride] + 2) >> 2;
@@ -258,12 +311,21 @@ void ff_pred8x8l_dc_8_mmi(uint8_t *src, int has_topleft, int has_topright,
     const int l7 = (src[-1+6*stride] + 2*src[-1+7*stride] + src[-1+7*stride] + 2) >> 2;
 
     __asm__ volatile (
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp4],   0x07(%[srcA])                           \n\t"
         "gsldrc1    %[ftmp4],   0x00(%[srcA])                           \n\t"
         "gsldlc1    %[ftmp5],   0x07(%[src0])                           \n\t"
         "gsldrc1    %[ftmp5],   0x00(%[src0])                           \n\t"
         "gsldlc1    %[ftmp6],   0x07(%[src1])                           \n\t"
         "gsldrc1    %[ftmp6],   0x00(%[src1])                           \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[srcA])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp4]                                \n\t"
+        "uld        %[all64],   0x00(%[src0])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp5]                                \n\t"
+        "uld        %[all64],   0x00(%[src1])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp6]                                \n\t"
+#endif
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "dli        %[tmp0],    0x03                                    \n\t"
         "punpcklbh  %[ftmp7],   %[ftmp4],       %[ftmp0]                \n\t"
@@ -309,7 +371,9 @@ void ff_pred8x8l_dc_8_mmi(uint8_t *src, int has_topleft, int has_topright,
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [ftmp10]"=&f"(ftmp[10]),          [ftmp11]"=&f"(ftmp[11]),
           [ftmp12]"=&f"(ftmp[12]),          [ftmp13]"=&f"(ftmp[13]),
-          [tmp0]"=&r"(tmp[0]),              [dc2]"=r"(dc2)
+          [tmp0]"=&r"(tmp[0]),
+          [all64]"=&r"(all64),
+          [dc2]"=r"(dc2)
         : [srcA]"r"((mips_reg)(src-stride-1)),
           [src0]"r"((mips_reg)(src-stride)),
           [src1]"r"((mips_reg)(src-stride+1)),
@@ -324,19 +388,37 @@ void ff_pred8x8l_dc_8_mmi(uint8_t *src, int has_topleft, int has_topright,
         "dli        %[tmp0],    0x02                                    \n\t"
         "punpcklwd  %[ftmp0],   %[dc],          %[dc]                   \n\t"
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
         "gssdxc1    %[ftmp0],   0x00(%[src],    %[stride])              \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[addr0],   %[src],         %[stride]               \n\t"
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[addr0])                          \n\t"
+#endif
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
         "gssdxc1    %[ftmp0],   0x00(%[src],    %[stride])              \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[addr0],   %[src],         %[stride]               \n\t"
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[addr0])                          \n\t"
+#endif
         "daddi      %[tmp0],    %[tmp0],        -0x01                   \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         "bnez       %[tmp0],    1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [tmp0]"=&r"(tmp[0]),
+          [addr0]"=&r"(addr[0]),
+          [all64]"=&r"(all64),
           [src]"+&r"(src)
         : [dc]"f"(dc),                      [stride]"r"((mips_reg)stride)
         : "memory"
@@ -348,15 +430,25 @@ void ff_pred8x8l_vertical_8_mmi(uint8_t *src, int has_topleft,
 {
     double ftmp[12];
     mips_reg tmp[1];
+    uint64_t all64;
 
     __asm__ volatile (
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp3],   0x07(%[srcA])                           \n\t"
         "gsldrc1    %[ftmp3],   0x00(%[srcA])                           \n\t"
         "gsldlc1    %[ftmp4],   0x07(%[src0])                           \n\t"
         "gsldrc1    %[ftmp4],   0x00(%[src0])                           \n\t"
         "gsldlc1    %[ftmp5],   0x07(%[src1])                           \n\t"
         "gsldrc1    %[ftmp5],   0x00(%[src1])                           \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[srcA])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp3]                                \n\t"
+        "uld        %[all64],   0x00(%[src0])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp4]                                \n\t"
+        "uld        %[all64],   0x00(%[src1])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp5]                                \n\t"
+#endif
         "punpcklbh  %[ftmp6],   %[ftmp3],       %[ftmp0]                \n\t"
         "punpckhbh  %[ftmp7],   %[ftmp3],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp8],   %[ftmp4],       %[ftmp0]                \n\t"
@@ -393,6 +485,7 @@ void ff_pred8x8l_vertical_8_mmi(uint8_t *src, int has_topleft,
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [ftmp10]"=&f"(ftmp[10]),          [ftmp11]"=&f"(ftmp[11]),
           [tmp0]"=&r"(tmp[0]),
+          [all64]"=r"(all64),
           [src]"=r"(src)
         : [srcA]"r"((mips_reg)(src-stride-1)),
           [src0]"r"((mips_reg)(src-stride)),
@@ -404,6 +497,7 @@ void ff_pred8x8l_vertical_8_mmi(uint8_t *src, int has_topleft,
     __asm__ volatile (
         "dli        %[tmp0],    0x02                                    \n\t"
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
@@ -415,10 +509,21 @@ void ff_pred8x8l_vertical_8_mmi(uint8_t *src, int has_topleft,
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+#endif
         "daddi      %[tmp0],    %[tmp0],        -0x01                   \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         "bnez       %[tmp0],    1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [tmp0]"=&r"(tmp[0]),
+          [all64]"=&r"(all64),
           [src]"+&r"(src)
         : [stride]"r"((mips_reg)stride)
         : "memory"
@@ -518,13 +623,19 @@ void ff_pred8x8_top_dc_8_mmi(uint8_t *src, ptrdiff_t stride)
     double ftmp[4];
     uint64_t tmp[1];
     mips_reg addr[1];
+    uint64_t all64;
 
     __asm__ volatile (
         "dli        %[tmp0],    0x02                                    \n\t"
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         PTR_SUBU   "%[addr0],   %[src],         %[stride]               \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp1],   0x07(%[addr0])                          \n\t"
         "gsldrc1    %[ftmp1],   0x00(%[addr0])                          \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[addr0])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp1]                                \n\t"
+#endif
         "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]                \n\t"
         "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]                \n\t"
         "biadd      %[ftmp2],   %[ftmp2]                                \n\t"
@@ -539,6 +650,7 @@ void ff_pred8x8_top_dc_8_mmi(uint8_t *src, ptrdiff_t stride)
         "psrlh      %[ftmp2],   %[ftmp2],       %[ftmp1]                \n\t"
         "psrlh      %[ftmp3],   %[ftmp3],       %[ftmp1]                \n\t"
         "packushb   %[ftmp1],   %[ftmp2],       %[ftmp3]                \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp1],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp1],   0x00(%[src])                            \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
@@ -562,10 +674,29 @@ void ff_pred8x8_top_dc_8_mmi(uint8_t *src, ptrdiff_t stride)
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         "gssdlc1    %[ftmp1],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp1],   0x00(%[src])                            \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp1]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+#endif
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [tmp0]"=&r"(tmp[0]),
           [addr0]"=&r"(addr[0]),
+          [all64]"=&r"(all64),
           [src]"+&r"(src)
         : [stride]"r"((mips_reg)stride)
         : "memory"
@@ -682,12 +813,19 @@ void ff_pred8x16_vertical_8_mmi(uint8_t *src, ptrdiff_t stride)
 {
     double ftmp[1];
     uint64_t tmp[1];
+    uint64_t all64;
 
     __asm__ volatile (
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp0],   0x07(%[srcA])                           \n\t"
         "gsldrc1    %[ftmp0],   0x00(%[srcA])                           \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[srcA])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp0]                                \n\t"
+#endif
         "dli        %[tmp0],    0x04                                    \n\t"
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
@@ -699,11 +837,25 @@ void ff_pred8x16_vertical_8_mmi(uint8_t *src, ptrdiff_t stride)
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         "gssdlc1    %[ftmp0],   0x07(%[src])                            \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[src])                            \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+        PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[src])                            \n\t"
+#endif
         "daddi      %[tmp0],    %[tmp0],        -0x01                   \n\t"
         PTR_ADDU   "%[src],     %[src],         %[stride]               \n\t"
         "bnez       %[tmp0],    1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),
           [tmp0]"=&r"(tmp[0]),
+          [all64]"=&r"(all64),
           [src]"+&r"(src)
         : [stride]"r"((mips_reg)stride),    [srcA]"r"((mips_reg)(src-stride))
         : "memory"
@@ -754,10 +906,17 @@ static inline void pred16x16_plane_compat_mmi(uint8_t *src, int stride,
         PTR_SUBU   "%[addr0],   %[src],         %[stride]               \n\t"
         "dli        %[tmp2],    0x20                                    \n\t"
         "dmtc1      %[tmp2],    %[ftmp4]                                \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp0],   0x06(%[addr0])                          \n\t"
         "gsldlc1    %[ftmp2],   0x0f(%[addr0])                          \n\t"
         "gsldrc1    %[ftmp0],   -0x01(%[addr0])                         \n\t"
         "gsldrc1    %[ftmp2],   0x08(%[addr0])                          \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[tmp0],    -0x01(%[addr0])                         \n\t"
+        "dmtc1      %[tmp0],    %[ftmp0]                                \n\t"
+        "uld        %[tmp0],    0x08(%[addr0])                          \n\t"
+        "dmtc1      %[tmp0],    %[ftmp2]                                \n\t"
+#endif
         "dsrl       %[ftmp1],   %[ftmp0],       %[ftmp4]                \n\t"
         "dsrl       %[ftmp3],   %[ftmp2],       %[ftmp4]                \n\t"
         "xor        %[ftmp4],   %[ftmp4],       %[ftmp4]                \n\t"
@@ -941,16 +1100,26 @@ static inline void pred16x16_plane_compat_mmi(uint8_t *src, int stride,
         "paddsh     %[ftmp9],   %[ftmp2],       %[ftmp6]                \n\t"
         "psrah      %[ftmp9],   %[ftmp9],       %[ftmp7]                \n\t"
         "packushb   %[ftmp0],   %[ftmp8],       %[ftmp9]                \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[addr0])                          \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[addr0])                          \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[tmp2],    %[ftmp0]                                \n\t"
+        "usd        %[tmp2],    0x00(%[addr0])                          \n\t"
+#endif
 
         "paddsh     %[ftmp8],   %[ftmp3],       %[ftmp6]                \n\t"
         "psrah      %[ftmp8],   %[ftmp8],       %[ftmp7]                \n\t"
         "paddsh     %[ftmp9],   %[ftmp4],       %[ftmp6]                \n\t"
         "psrah      %[ftmp9],   %[ftmp9],       %[ftmp7]                \n\t"
         "packushb   %[ftmp0],   %[ftmp8],       %[ftmp9]                \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x0f(%[addr0])                          \n\t"
         "gssdrc1    %[ftmp0],   0x08(%[addr0])                          \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[tmp2],    %[ftmp0]                                \n\t"
+        "usd        %[tmp2],    0x08(%[addr0])                          \n\t"
+#endif
 
         "paddsh     %[ftmp6],   %[ftmp6],       %[ftmp5]                \n\t"
         PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
