@@ -31,6 +31,7 @@ void ff_dct_unquantize_h263_intra_mmi(MpegEncContext *s, int16_t *block,
     int64_t level, qmul, qadd, nCoeffs;
     double ftmp[6];
     mips_reg addr[1];
+    uint64_t all64;
 
     qmul = qscale << 1;
     av_assert2(s->block_last_index[n]>=0 || s->h263_aic);
@@ -62,10 +63,17 @@ void ff_dct_unquantize_h263_intra_mmi(MpegEncContext *s, int16_t *block,
         ".p2align   4                                                   \n\t"
         "1:                                                             \n\t"
         PTR_ADDU   "%[addr0],   %[block],       %[nCoeffs]              \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp1],   0x07(%[addr0])                          \n\t"
         "gsldrc1    %[ftmp1],   0x00(%[addr0])                          \n\t"
         "gsldlc1    %[ftmp2],   0x0f(%[addr0])                          \n\t"
         "gsldrc1    %[ftmp2],   0x08(%[addr0])                          \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[addr0])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp1]                                \n\t"
+        "uld        %[all64],   0x08(%[addr0])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp2]                                \n\t"
+#endif
         "mov.d      %[ftmp3],   %[ftmp1]                                \n\t"
         "mov.d      %[ftmp4],   %[ftmp2]                                \n\t"
         "pmullh     %[ftmp1],   %[ftmp1],       %[qmul]                 \n\t"
@@ -83,15 +91,23 @@ void ff_dct_unquantize_h263_intra_mmi(MpegEncContext *s, int16_t *block,
         "pandn      %[ftmp1],   %[ftmp1],       %[ftmp3]                \n\t"
         "pandn      %[ftmp2],   %[ftmp2],       %[ftmp4]                \n\t"
         PTR_ADDIU  "%[nCoeffs], %[nCoeffs],     0x10                    \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp1],   0x07(%[addr0])                          \n\t"
         "gssdrc1    %[ftmp1],   0x00(%[addr0])                          \n\t"
         "gssdlc1    %[ftmp2],   0x0f(%[addr0])                          \n\t"
         "gssdrc1    %[ftmp2],   0x08(%[addr0])                          \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp1]                                \n\t"
+        "usd        %[all64],   0x00(%[addr0])                          \n\t"
+        "dmfc1      %[all64],   %[ftmp2]                                \n\t"
+        "usd        %[all64],   0x08(%[addr0])                          \n\t"
+#endif
         "blez       %[nCoeffs], 1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
-          [addr0]"=&r"(addr[0])
+          [addr0]"=&r"(addr[0]),
+          [all64]"=&r"(all64)
         : [block]"r"((mips_reg)(block+nCoeffs)),
           [nCoeffs]"r"((mips_reg)(2*(-nCoeffs))),
           [qmul]"f"(qmul),                  [qadd]"f"(qadd)
@@ -107,6 +123,7 @@ void ff_dct_unquantize_h263_inter_mmi(MpegEncContext *s, int16_t *block,
     int64_t qmul, qadd, nCoeffs;
     double ftmp[6];
     mips_reg addr[1];
+    uint64_t all64;
 
     qmul = qscale << 1;
     qadd = (qscale - 1) | 1;
@@ -124,10 +141,17 @@ void ff_dct_unquantize_h263_inter_mmi(MpegEncContext *s, int16_t *block,
         ".p2align   4                                                   \n\t"
         "1:                                                             \n\t"
         PTR_ADDU   "%[addr0],   %[block],       %[nCoeffs]              \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp1],   0x07(%[addr0])                          \n\t"
         "gsldrc1    %[ftmp1],   0x00(%[addr0])                          \n\t"
         "gsldlc1    %[ftmp2],   0x0f(%[addr0])                          \n\t"
         "gsldrc1    %[ftmp2],   0x08(%[addr0])                          \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[addr0])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp1]                                \n\t"
+        "uld        %[all64],   0x08(%[addr0])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp2]                                \n\t"
+#endif
         "mov.d      %[ftmp3],   %[ftmp1]                                \n\t"
         "mov.d      %[ftmp4],   %[ftmp2]                                \n\t"
         "pmullh     %[ftmp1],   %[ftmp1],       %[qmul]                 \n\t"
@@ -145,15 +169,23 @@ void ff_dct_unquantize_h263_inter_mmi(MpegEncContext *s, int16_t *block,
         "pandn      %[ftmp1],   %[ftmp1],       %[ftmp3]                \n\t"
         "pandn      %[ftmp2],   %[ftmp2],       %[ftmp4]                \n\t"
         PTR_ADDIU  "%[nCoeffs], %[nCoeffs],     0x10                    \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp1],   0x07(%[addr0])                          \n\t"
         "gssdrc1    %[ftmp1],   0x00(%[addr0])                          \n\t"
         "gssdlc1    %[ftmp2],   0x0f(%[addr0])                          \n\t"
         "gssdrc1    %[ftmp2],   0x08(%[addr0])                          \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp1]                                \n\t"
+        "usd        %[all64],   0x00(%[addr0])                          \n\t"
+        "dmfc1      %[all64],   %[ftmp2]                                \n\t"
+        "usd        %[all64],   0x08(%[addr0])                          \n\t"
+#endif
         "blez       %[nCoeffs], 1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
-          [addr0]"=&r"(addr[0])
+          [addr0]"=&r"(addr[0]),
+          [all64]"=&r"(all64)
         : [block]"r"((mips_reg)(block+nCoeffs)),
           [nCoeffs]"r"((mips_reg)(2*(-nCoeffs))),
           [qmul]"f"(qmul),                  [qadd]"f"(qadd)
@@ -169,7 +201,8 @@ void ff_dct_unquantize_mpeg1_intra_mmi(MpegEncContext *s, int16_t *block,
     int block0;
     double ftmp[10];
     uint64_t tmp[1];
-    mips_reg addr[1];
+    mips_reg addr[2];
+    uint64_t all64;
 
     av_assert2(s->block_last_index[n]>=0);
     nCoeffs = s->intra_scantable.raster_end[s->block_last_index[n]] + 1;
@@ -193,12 +226,28 @@ void ff_dct_unquantize_mpeg1_intra_mmi(MpegEncContext *s, int16_t *block,
         "or         %[addr0],   %[nCoeffs],     $0                      \n\t"
         ".p2align   4                                                   \n\t"
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gsldxc1    %[ftmp2],   0x00(%[addr0],  %[block])               \n\t"
         "gsldxc1    %[ftmp3],   0x08(%[addr0],  %[block])               \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[addr0],       %[block]                \n\t"
+        "uld        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp2]                                \n\t"
+        "uld        %[all64],   0x08(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp3]                                \n\t"
+#endif
         "mov.d      %[ftmp4],   %[ftmp2]                                \n\t"
         "mov.d      %[ftmp5],   %[ftmp3]                                \n\t"
+#if HAVE_LOONGSON3
         "gsldxc1    %[ftmp6],   0x00(%[addr0],  %[quant])               \n\t"
         "gsldxc1    %[ftmp7],   0x08(%[addr0],  %[quant])               \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[addr0],       %[quant]                \n\t"
+        "uld        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp6]                                \n\t"
+        "uld        %[all64],   0x08(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp7]                                \n\t"
+#endif
         "pmullh     %[ftmp6],   %[ftmp6],       %[ftmp1]                \n\t"
         "pmullh     %[ftmp7],   %[ftmp7],       %[ftmp1]                \n\t"
         "xor        %[ftmp8],   %[ftmp8],       %[ftmp8]                \n\t"
@@ -229,8 +278,16 @@ void ff_dct_unquantize_mpeg1_intra_mmi(MpegEncContext *s, int16_t *block,
         "psubh      %[ftmp3],   %[ftmp3],       %[ftmp9]                \n\t"
         "pandn      %[ftmp6],   %[ftmp6],       %[ftmp2]                \n\t"
         "pandn      %[ftmp7],   %[ftmp7],       %[ftmp3]                \n\t"
+#if HAVE_LOONGSON3
         "gssdxc1    %[ftmp6],   0x00(%[addr0],  %[block])               \n\t"
         "gssdxc1    %[ftmp7],   0x08(%[addr0],  %[block])               \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[addr0],       %[block]                \n\t"
+        "dmfc1      %[all64],   %[ftmp6]                                \n\t"
+        "usd        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmfc1      %[all64],   %[ftmp7]                                \n\t"
+        "usd        %[all64],   0x08(%[addr1])                          \n\t"
+#endif
         PTR_ADDIU  "%[addr0],   %[addr0],       0x10                    \n\t"
         "bltz       %[addr0],   1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
@@ -239,7 +296,8 @@ void ff_dct_unquantize_mpeg1_intra_mmi(MpegEncContext *s, int16_t *block,
           [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [tmp0]"=&r"(tmp[0]),
-          [addr0]"=&r"(addr[0])
+          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
+          [all64]"=&r"(all64)
         : [block]"r"((mips_reg)(block+nCoeffs)),
           [quant]"r"((mips_reg)(quant_matrix+nCoeffs)),
           [nCoeffs]"r"((mips_reg)(2*(-nCoeffs))),
@@ -257,7 +315,8 @@ void ff_dct_unquantize_mpeg1_inter_mmi(MpegEncContext *s, int16_t *block,
     const uint16_t *quant_matrix;
     double ftmp[10];
     uint64_t tmp[1];
-    mips_reg addr[1];
+    mips_reg addr[2];
+    uint64_t all64;
 
     av_assert2(s->block_last_index[n] >= 0);
     nCoeffs = s->intra_scantable.raster_end[s->block_last_index[n]] + 1;
@@ -274,12 +333,28 @@ void ff_dct_unquantize_mpeg1_inter_mmi(MpegEncContext *s, int16_t *block,
         "or         %[addr0],   %[nCoeffs],     $0                      \n\t"
         ".p2align   4                                                   \n\t"
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gsldxc1    %[ftmp2],   0x00(%[addr0],  %[block])               \n\t"
         "gsldxc1    %[ftmp3],   0x08(%[addr0],  %[block])               \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[addr0],       %[block]                \n\t"
+        "uld        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp2]                                \n\t"
+        "uld        %[all64],   0x08(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp3]                                \n\t"
+#endif
         "mov.d      %[ftmp4],   %[ftmp2]                                \n\t"
         "mov.d      %[ftmp5],   %[ftmp3]                                \n\t"
+#if HAVE_LOONGSON3
         "gsldxc1    %[ftmp6],   0x00(%[addr0],  %[quant])               \n\t"
         "gsldxc1    %[ftmp7],   0x08(%[addr0],  %[quant])               \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[addr0],       %[quant]                \n\t"
+        "uld        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp6]                                \n\t"
+        "uld        %[all64],   0x08(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp7]                                \n\t"
+#endif
         "pmullh     %[ftmp6],   %[ftmp6],       %[ftmp1]                \n\t"
         "pmullh     %[ftmp7],   %[ftmp7],       %[ftmp1]                \n\t"
         "xor        %[ftmp8],   %[ftmp8],       %[ftmp8]                \n\t"
@@ -314,8 +389,16 @@ void ff_dct_unquantize_mpeg1_inter_mmi(MpegEncContext *s, int16_t *block,
         "psubh      %[ftmp3],   %[ftmp3],       %[ftmp9]                \n\t"
         "pandn      %[ftmp6],   %[ftmp6],       %[ftmp2]                \n\t"
         "pandn      %[ftmp7],   %[ftmp7],       %[ftmp3]                \n\t"
+#if HAVE_LOONGSON3
         "gssdxc1    %[ftmp6],   0x00(%[addr0],  %[block])               \n\t"
         "gssdxc1    %[ftmp7],   0x08(%[addr0],  %[block])               \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[addr0],       %[block]                \n\t"
+        "dmfc1      %[all64],   %[ftmp6]                                \n\t"
+        "usd        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmfc1      %[all64],   %[ftmp7]                                \n\t"
+        "usd        %[all64],   0x08(%[addr1])                          \n\t"
+#endif
         PTR_ADDIU  "%[addr0],   %[addr0],       0x10                    \n\t"
         "bltz       %[addr0],   1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
@@ -324,7 +407,8 @@ void ff_dct_unquantize_mpeg1_inter_mmi(MpegEncContext *s, int16_t *block,
           [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [tmp0]"=&r"(tmp[0]),
-          [addr0]"=&r"(addr[0])
+          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
+          [all64]"=&r"(all64)
         : [block]"r"((mips_reg)(block+nCoeffs)),
           [quant]"r"((mips_reg)(quant_matrix+nCoeffs)),
           [nCoeffs]"r"((mips_reg)(2*(-nCoeffs))),
@@ -341,7 +425,8 @@ void ff_dct_unquantize_mpeg2_intra_mmi(MpegEncContext *s, int16_t *block,
     int block0;
     double ftmp[10];
     uint64_t tmp[1];
-    mips_reg addr[1];
+    mips_reg addr[2];
+    uint64_t all64;
 
     assert(s->block_last_index[n]>=0);
 
@@ -368,12 +453,28 @@ void ff_dct_unquantize_mpeg2_intra_mmi(MpegEncContext *s, int16_t *block,
         "or         %[addr0],   %[nCoeffs],     $0                      \n\t"
         ".p2align   4                                                   \n\t"
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gsldxc1    %[ftmp1],   0x00(%[addr0],  %[block])               \n\t"
         "gsldxc1    %[ftmp2],   0x08(%[addr0],  %[block])               \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[addr0],       %[block]                \n\t"
+        "uld        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp1]                                \n\t"
+        "uld        %[all64],   0x08(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp2]                                \n\t"
+#endif
         "mov.d      %[ftmp3],   %[ftmp1]                                \n\t"
         "mov.d      %[ftmp4],   %[ftmp2]                                \n\t"
+#if HAVE_LOONGSON3
         "gsldxc1    %[ftmp5],   0x00(%[addr0],  %[quant])               \n\t"
         "gsldxc1    %[ftmp6],   0x00(%[addr0],  %[quant])               \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[addr0],       %[block]                \n\t"
+        "uld        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp5]                                \n\t"
+        "uld        %[all64],   0x08(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp6]                                \n\t"
+#endif
         "pmullh     %[ftmp5],   %[ftmp5],       %[ftmp9]                \n\t"
         "pmullh     %[ftmp6],   %[ftmp6],       %[ftmp9]                \n\t"
         "xor        %[ftmp7],   %[ftmp7],       %[ftmp7]                \n\t"
@@ -401,8 +502,16 @@ void ff_dct_unquantize_mpeg2_intra_mmi(MpegEncContext *s, int16_t *block,
         "pandn      %[ftmp5],   %[ftmp5],       %[ftmp1]                \n\t"
         "pandn      %[ftmp6],   %[ftmp6],       %[ftmp2]                \n\t"
         PTR_ADDIU  "%[addr0],   %[addr0],       0x10                    \n\t"
+#if HAVE_LOONGSON3
         "gssdxc1    %[ftmp5],   0x00(%[addr0],  %[block])               \n\t"
         "gssdxc1    %[ftmp6],   0x08(%[addr0],  %[block])               \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[addr0],       %[block]                \n\t"
+        "dmfc1      %[all64],   %[ftmp5]                                \n\t"
+        "usd        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmfc1      %[all64],   %[ftmp6]                                \n\t"
+        "usd        %[all64],   0x08(%[addr1])                          \n\t"
+#endif
         "blez       %[addr0],   1b                                      \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
@@ -410,7 +519,8 @@ void ff_dct_unquantize_mpeg2_intra_mmi(MpegEncContext *s, int16_t *block,
           [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
           [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
           [tmp0]"=&r"(tmp[0]),
-          [addr0]"=&r"(addr[0])
+          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
+          [all64]"=&r"(all64)
         : [block]"r"((mips_reg)(block+nCoeffs)),
           [quant]"r"((mips_reg)(quant_matrix+nCoeffs)),
           [nCoeffs]"r"((mips_reg)(2*(-nCoeffs))),
