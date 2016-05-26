@@ -29,7 +29,8 @@ void ff_put_pixels_clamped_mmi(const int16_t *block,
         uint8_t *av_restrict pixels, ptrdiff_t line_size)
 {
     double ftmp[8];
-    mips_reg addr[1];
+    mips_reg addr[2];
+    uint64_t all64;
 
     __asm__ volatile (
         "ldc1       %[ftmp0],   0x00(%[block])                          \n\t"
@@ -47,13 +48,23 @@ void ff_put_pixels_clamped_mmi(const int16_t *block,
         "packushb   %[ftmp6],   %[ftmp6],       %[ftmp7]                \n\t"
         "sdc1       %[ftmp0],   0x00(%[pixels])                         \n\t"
         "sdc1       %[ftmp2],   0x00(%[addr0])                          \n\t"
+#if HAVE_LOONGSON3
         "gssdxc1    %[ftmp4],   0x00(%[addr0],  %[line_size])           \n\t"
         "gssdxc1    %[ftmp6],   0x00(%[pixels], %[line_sizex3])         \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp4]                                \n\t"
+        PTR_ADDU   "%[addr1],   %[addr0],       %[line_size]            \n\t"
+        "usd        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmfc1      %[all64],   %[ftmp6]                                \n\t"
+        PTR_ADDU   "%[addr1],   %[pixels],      %[line_sizex3]          \n\t"
+        "usd        %[all64],   0x00(%[addr1])                          \n\t"
+#endif
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
           [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
-          [addr0]"=&r"(addr[0]),
+          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
+          [all64]"=&r"(all64),
           [pixels]"+&r"(pixels)
         : [line_size]"r"((mips_reg)line_size),
           [line_sizex3]"r"((mips_reg)(line_size*3)),
@@ -80,13 +91,23 @@ void ff_put_pixels_clamped_mmi(const int16_t *block,
         "packushb   %[ftmp6],   %[ftmp6],       %[ftmp7]                \n\t"
         "sdc1       %[ftmp0],   0x00(%[pixels])                         \n\t"
         "sdc1       %[ftmp2],   0x00(%[addr0])                          \n\t"
+#if HAVE_LOONGSON3
         "gssdxc1    %[ftmp4],   0x00(%[addr0],  %[line_size])           \n\t"
         "gssdxc1    %[ftmp6],   0x00(%[pixels], %[line_sizex3])         \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp4]                                \n\t"
+        PTR_ADDU   "%[addr1],   %[addr0],       %[line_size]            \n\t"
+        "usd        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmfc1      %[all64],   %[ftmp6]                                \n\t"
+        PTR_ADDU   "%[addr1],   %[pixels],      %[line_sizex3]          \n\t"
+        "usd        %[all64],   0x00(%[addr1])                          \n\t"
+#endif
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
           [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
-          [addr0]"=&r"(addr[0]),
+          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
+          [all64]"=&r"(all64),
           [pixels]"+&r"(pixels)
         : [line_size]"r"((mips_reg)line_size),
           [line_sizex3]"r"((mips_reg)(line_size*3)),
@@ -101,7 +122,8 @@ void ff_put_signed_pixels_clamped_mmi(const int16_t *block,
     int64_t line_skip = line_size;
     int64_t line_skip3 = 0;
     double ftmp[5];
-    mips_reg addr[1];
+    mips_reg addr[2];
+    uint64_t all64;
 
     __asm__ volatile (
         PTR_ADDU   "%[line_skip3],  %[line_skip],   %[line_skip]        \n\t"
@@ -122,10 +144,23 @@ void ff_put_signed_pixels_clamped_mmi(const int16_t *block,
         "paddb      %[ftmp3],       %[ftmp3],       %[ff_pb_80]         \n\t"
         "paddb      %[ftmp4],       %[ftmp4],       %[ff_pb_80]         \n\t"
         "sdc1       %[ftmp1],       0x00(%[pixels])                     \n\t"
+#if HAVE_LOONGSON3
         "gssdxc1    %[ftmp2],       0x00(%[pixels], %[line_skip])       \n\t"
         "gssdxc1    %[ftmp3],       0x00(%[pixels], %[line_skip3])      \n\t"
         PTR_ADDU   "%[line_skip3],  %[line_skip3],  %[line_skip]        \n\t"
         "gssdxc1    %[ftmp4],       0x00(%[pixels], %[line_skip3])      \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],       %[ftmp2]                            \n\t"
+        PTR_ADDU   "%[addr1],       %[pixels],      %[line_skip]        \n\t"
+        "usd        %[all64],       0x00(%[addr1])                      \n\t"
+        "dmfc1      %[all64],       %[ftmp3]                            \n\t"
+        PTR_ADDU   "%[addr1],       %[pixels],      %[line_skip3]       \n\t"
+        "usd        %[all64],       0x00(%[addr1])                      \n\t"
+        PTR_ADDU   "%[line_skip3],  %[line_skip3],  %[line_skip]        \n\t"
+        "dmfc1      %[all64],       %[ftmp4]                            \n\t"
+        PTR_ADDU   "%[addr1],       %[pixels],      %[line_skip3]       \n\t"
+        "usd        %[all64],       0x00(%[addr1])                      \n\t"
+#endif
         PTR_ADDU   "%[addr0],       %[line_skip3],  %[line_skip]        \n\t"
         PTR_ADDU   "%[pixels],      %[pixels],      %[addr0]            \n\t"
         "ldc1       %[ftmp1],       0x40(%[block])                      \n\t"
@@ -145,14 +180,28 @@ void ff_put_signed_pixels_clamped_mmi(const int16_t *block,
         "paddb      %[ftmp3],       %[ftmp3],       %[ff_pb_80]         \n\t"
         "paddb      %[ftmp4],       %[ftmp4],       %[ff_pb_80]         \n\t"
         "sdc1       %[ftmp1],       0x00(%[pixels])                     \n\t"
+#if HAVE_LOONGSON3
         "gssdxc1    %[ftmp2],       0x00(%[pixels], %[line_skip])       \n\t"
         PTR_ADDU   "%[addr0],       %[line_skip],   %[line_skip]        \n\t"
         "gssdxc1    %[ftmp3],       0x00(%[pixels], %[addr0])           \n\t"
         "gssdxc1    %[ftmp4],       0x00(%[pixels], %[line_skip3])      \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],       %[ftmp2]                            \n\t"
+        PTR_ADDU   "%[addr1],       %[pixels],      %[line_skip]        \n\t"
+        "usd        %[all64],       0x00(%[addr1])                      \n\t"
+        PTR_ADDU   "%[addr0],       %[line_skip],   %[line_skip]        \n\t"
+        "dmfc1      %[all64],       %[ftmp3]                            \n\t"
+        PTR_ADDU   "%[addr1],       %[pixels],      %[addr0]            \n\t"
+        "usd        %[all64],       0x00(%[addr1])                      \n\t"
+        "dmfc1      %[all64],       %[ftmp4]                            \n\t"
+        PTR_ADDU   "%[addr1],       %[pixels],      %[line_skip3]       \n\t"
+        "usd        %[all64],       0x00(%[addr1])                      \n\t"
+#endif
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [ftmp4]"=&f"(ftmp[4]),
-          [addr0]"=&r"(addr[0]),
+          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
+          [all64]"=&r"(all64),
           [pixels]"+&r"(pixels),            [line_skip3]"+&r"(line_skip3)
         : [block]"r"(block),
           [line_skip]"r"((mips_reg)line_skip),
@@ -166,6 +215,8 @@ void ff_add_pixels_clamped_mmi(const int16_t *block,
 {
     double ftmp[8];
     uint64_t tmp[1];
+    mips_reg addr[2];
+    uint64_t all64;
 
     __asm__ volatile (
         "li         %[tmp0],    0x04                                    \n\t"
@@ -176,7 +227,13 @@ void ff_add_pixels_clamped_mmi(const int16_t *block,
         "ldc1       %[ftmp3],   0x10(%[block])                          \n\t"
         "ldc1       %[ftmp4],   0x18(%[block])                          \n\t"
         "ldc1       %[ftmp5],   0x00(%[pixels])                         \n\t"
+#if HAVE_LOONGSON3
         "gsldxc1    %[ftmp6],   0x00(%[pixels], %[line_size])           \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[pixels],      %[line_size]            \n\t"
+        "uld        %[all64],   0x00(%[addr1])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp6]                                \n\t"
+#endif
         "mov.d      %[ftmp7],   %[ftmp5]                                \n\t"
         "punpcklbh  %[ftmp5],   %[ftmp5],       %[ftmp0]                \n\t"
         "punpckhbh  %[ftmp7],   %[ftmp7],       %[ftmp0]                \n\t"
@@ -190,7 +247,13 @@ void ff_add_pixels_clamped_mmi(const int16_t *block,
         "packushb   %[ftmp1],   %[ftmp1],       %[ftmp2]                \n\t"
         "packushb   %[ftmp3],   %[ftmp3],       %[ftmp4]                \n\t"
         "sdc1       %[ftmp1],   0x00(%[pixels])                         \n\t"
+#if HAVE_LOONGSON3
         "gssdxc1    %[ftmp3],   0x00(%[pixels], %[line_size])           \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp3]                                \n\t"
+        PTR_ADDU   "%[addr1],   %[pixels],      %[line_size]            \n\t"
+        "usd        %[all64],   0x00(%[addr1])                          \n\t"
+#endif
         "addi       %[tmp0],    %[tmp0],        -0x01                   \n\t"
         PTR_ADDIU  "%[block],   %[block],       0x20                    \n\t"
         PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
@@ -201,6 +264,8 @@ void ff_add_pixels_clamped_mmi(const int16_t *block,
           [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
           [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
           [tmp0]"=&r"(tmp[0]),
+          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
+          [all64]"=&r"(all64),
           [pixels]"+&r"(pixels),            [block]"+&r"(block)
         : [line_size]"r"((mips_reg)line_size)
         : "memory"
