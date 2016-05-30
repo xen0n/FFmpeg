@@ -29,18 +29,32 @@ void ff_get_pixels_8_mmi(int16_t *av_restrict block, const uint8_t *pixels,
 {
     double ftmp[6];
     mips_reg tmp[2];
+    mips_reg addr[1];
+    uint64_t all64;
 
     __asm__ volatile (
         "li         %[tmp1],    0x08                                    \n\t"
         "move       %[tmp0],    $0                                      \n\t"
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp1],   0x07(%[pixels])                         \n\t"
         "gsldrc1    %[ftmp1],   0x00(%[pixels])                         \n\t"
         "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]                \n\t"
         "punpckhbh  %[ftmp5],   %[ftmp1],       %[ftmp0]                \n\t"
         "gssdxc1    %[ftmp2],   0x00(%[block],  %[tmp0])                \n\t"
         "gssdxc1    %[ftmp5],   0x08(%[block],  %[tmp0])                \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[pixels])                         \n\t"
+        "dmtc1      %[all64],   %[ftmp1]                                \n\t"
+        "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]                \n\t"
+        "punpckhbh  %[ftmp5],   %[ftmp1],       %[ftmp0]                \n\t"
+        PTR_ADDU   "%[addr0],   %[block],       %[tmp0]                 \n\t"
+        "dmfc1      %[all64],   %[ftmp2]                                \n\t"
+        "usd        %[all64],   0x00(%[addr0])                          \n\t"
+        "dmfc1      %[all64],   %[ftmp5]                                \n\t"
+        "usd        %[all64],   0x08(%[addr0])                          \n\t"
+#endif
         PTR_ADDI   "%[tmp1],    %[tmp1],       -0x01                    \n\t"
         PTR_ADDIU  "%[tmp0],    %[tmp0],        0x10                    \n\t"
         PTR_ADDU   "%[pixels],  %[pixels],      %[line_size]            \n\t"
@@ -49,6 +63,8 @@ void ff_get_pixels_8_mmi(int16_t *av_restrict block, const uint8_t *pixels,
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
           [tmp0]"=&r"(tmp[0]),              [tmp1]"=&r"(tmp[1]),
+          [addr0]"=&r"(addr[0]),
+          [all64]"=&r"(all64),
           [pixels]"+&r"(pixels)
         : [block]"r"((mips_reg)block),      [line_size]"r"((mips_reg)line_size)
         : "memory"
@@ -60,16 +76,25 @@ void ff_diff_pixels_mmi(int16_t *av_restrict block, const uint8_t *src1,
 {
     double ftmp[5];
     mips_reg tmp[1];
+    uint64_t all64;
 
     __asm__ volatile (
         "li         %[tmp0],    0x08                                    \n\t"
         "xor        %[ftmp4],   %[ftmp4],       %[ftmp4]                \n\t"
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp0],   0x07(%[src1])                           \n\t"
         "gsldrc1    %[ftmp0],   0x00(%[src1])                           \n\t"
         "or         %[ftmp1],   %[ftmp0],       %[ftmp0]                \n\t"
         "gsldlc1    %[ftmp2],   0x07(%[src2])                           \n\t"
         "gsldrc1    %[ftmp2],   0x00(%[src2])                           \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[src1])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp0]                                \n\t"
+        "or         %[ftmp1],   %[ftmp0],       %[ftmp0]                \n\t"
+        "uld        %[all64],   0x00(%[src2])                           \n\t"
+        "dmtc1      %[all64],   %[ftmp2]                                \n\t"
+#endif
         "or         %[ftmp3],   %[ftmp2],       %[ftmp2]                \n\t"
         "punpcklbh  %[ftmp0],   %[ftmp0],       %[ftmp4]                \n\t"
         "punpckhbh  %[ftmp1],   %[ftmp1],       %[ftmp4]                \n\t"
@@ -77,10 +102,17 @@ void ff_diff_pixels_mmi(int16_t *av_restrict block, const uint8_t *src1,
         "punpckhbh  %[ftmp3],   %[ftmp3],       %[ftmp4]                \n\t"
         "psubh      %[ftmp0],   %[ftmp0],       %[ftmp2]                \n\t"
         "psubh      %[ftmp1],   %[ftmp1],       %[ftmp3]                \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[block])                          \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[block])                          \n\t"
         "gssdlc1    %[ftmp1],   0x0f(%[block])                          \n\t"
         "gssdrc1    %[ftmp1],   0x08(%[block])                          \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[block])                          \n\t"
+        "dmfc1      %[all64],   %[ftmp1]                                \n\t"
+        "usd        %[all64],   0x08(%[block])                          \n\t"
+#endif
         PTR_ADDI   "%[tmp0],    %[tmp0], -0x01                          \n\t"
         PTR_ADDIU  "%[block],   %[block], 0x10                          \n\t"
         PTR_ADDU   "%[src1],    %[src1],        %[stride]               \n\t"
@@ -90,6 +122,7 @@ void ff_diff_pixels_mmi(int16_t *av_restrict block, const uint8_t *src1,
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [ftmp4]"=&f"(ftmp[4]),
           [tmp0]"=&r"(tmp[0]),
+          [all64]"=&r"(all64),
           [block]"+&r"(block),              [src1]"+&r"(src1),
           [src2]"+&r"(src2)
         : [stride]"r"((mips_reg)stride)
