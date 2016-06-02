@@ -537,12 +537,13 @@ void ff_pred4x4_dc_8_mmi(uint8_t *src, const uint8_t *topright,
                  + src[3-stride] + src[-1+0*stride] + src[-1+1*stride]
                  + src[-1+2*stride] + src[-1+3*stride] + 4) >>3;
     uint64_t tmp[2];
-    mips_reg addr[1];
+    mips_reg addr[2];
 
     __asm__ volatile (
         PTR_ADDU   "%[tmp0],    %[dc],          $0                      \n\t"
         "dmul       %[tmp1],    %[tmp0],        %[ff_pb_1]              \n\t"
         "xor        %[addr0],   %[addr0],       %[addr0]                \n\t"
+#if HAVE_LOONGSON3
         "gsswx      %[tmp1],    0x00(%[src],    %[addr0])               \n\t"
         PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
         "gsswx      %[tmp1],    0x00(%[src],    %[addr0])               \n\t"
@@ -550,8 +551,21 @@ void ff_pred4x4_dc_8_mmi(uint8_t *src, const uint8_t *topright,
         "gsswx      %[tmp1],    0x00(%[src],    %[addr0])               \n\t"
         PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
         "gsswx      %[tmp1],    0x00(%[src],    %[addr0])               \n\t"
+#elif HAVE_LOONGSON2
+        PTR_ADDU   "%[addr1],   %[src],         %[addr0]                \n\t"
+        "sw         %[tmp1],    0x00(%[addr1])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        PTR_ADDU   "%[addr1],   %[src],         %[addr0]                \n\t"
+        "sw         %[tmp1],    0x00(%[addr1])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        PTR_ADDU   "%[addr1],   %[src],         %[addr0]                \n\t"
+        "sw         %[tmp1],    0x00(%[addr1])                          \n\t"
+        PTR_ADDU   "%[addr0],   %[addr0],       %[stride]               \n\t"
+        PTR_ADDU   "%[addr1],   %[src],         %[addr0]                \n\t"
+        "sw         %[tmp1],    0x00(%[addr1])                          \n\t"
+#endif
         : [tmp0]"=&r"(tmp[0]),              [tmp1]"=&r"(tmp[1]),
-          [addr0]"=&r"(addr[0])
+          [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1])
         : [src]"r"((mips_reg)src),          [stride]"r"((mips_reg)stride),
           [dc]"r"(dc),                      [ff_pb_1]"r"(ff_pb_1)
         : "memory"
