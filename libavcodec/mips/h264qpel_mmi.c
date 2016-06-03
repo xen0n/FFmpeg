@@ -2303,11 +2303,12 @@ static void avg_h264_qpel8_h_lowpass_l2_mmi(uint8_t *dst, const uint8_t *src,
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "mtc1       %[tmp1],    %[ftmp8]                                \n\t"
         "1:                                                             \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp1],   0x07(%[src])                            \n\t"
         "gsldrc1    %[ftmp1],   0x00(%[src])                            \n\t"
         "gsldlc1    %[ftmp2],   0x08(%[src])                            \n\t"
         "gsldrc1    %[ftmp2],   0x01(%[src])                            \n\t"
-#if HAVE_LOONGSON3
+#elif HAVE_LOONGSON2
         "uld        %[all64],   0x00(%[src])                            \n\t"
         "dmtc1      %[all64],   %[ftmp1]                                \n\t"
         "uld        %[all64],   0x01(%[src])                            \n\t"
