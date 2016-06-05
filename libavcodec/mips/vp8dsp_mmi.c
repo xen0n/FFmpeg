@@ -234,8 +234,10 @@ void ff_vp8_luma_dc_wht_mmi(int16_t block[4][4][16], int16_t dc[16])
 {
 #if OK
     double ftmp[8];
+    uint64_t all64;
 
     __asm__ volatile (
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp0],   0x07(%[dc])                         \n\t"
         "gsldrc1    %[ftmp0],   0x00(%[dc])                         \n\t"
         "gsldlc1    %[ftmp1],   0x0f(%[dc])                         \n\t"
@@ -244,6 +246,16 @@ void ff_vp8_luma_dc_wht_mmi(int16_t block[4][4][16], int16_t dc[16])
         "gsldrc1    %[ftmp2],   0x10(%[dc])                         \n\t"
         "gsldlc1    %[ftmp3],   0x1f(%[dc])                         \n\t"
         "gsldrc1    %[ftmp3],   0x18(%[dc])                         \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[dc])                         \n\t"
+        "dmtc1      %[all64],   %[ftmp0]                            \n\t"
+        "uld        %[all64],   0x08(%[dc])                         \n\t"
+        "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+        "uld        %[all64],   0x10(%[dc])                         \n\t"
+        "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+        "uld        %[all64],   0x18(%[dc])                         \n\t"
+        "dmtc1      %[all64],   %[ftmp3]                            \n\t"
+#endif
         "paddsh     %[ftmp4],   %[ftmp0],       %[ftmp3]            \n\t"
         "psubsh     %[ftmp5],   %[ftmp0],       %[ftmp3]            \n\t"
         "paddsh     %[ftmp6],   %[ftmp1],       %[ftmp2]            \n\t"
@@ -252,6 +264,7 @@ void ff_vp8_luma_dc_wht_mmi(int16_t block[4][4][16], int16_t dc[16])
         "paddsh     %[ftmp1],   %[ftmp5],       %[ftmp7]            \n\t"
         "psubsh     %[ftmp2],   %[ftmp4],       %[ftmp6]            \n\t"
         "psubsh     %[ftmp3],   %[ftmp5],       %[ftmp7]            \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[dc])                         \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[dc])                         \n\t"
         "gssdlc1    %[ftmp1],   0x0f(%[dc])                         \n\t"
@@ -260,10 +273,21 @@ void ff_vp8_luma_dc_wht_mmi(int16_t block[4][4][16], int16_t dc[16])
         "gssdrc1    %[ftmp2],   0x10(%[dc])                         \n\t"
         "gssdlc1    %[ftmp3],   0x1f(%[dc])                         \n\t"
         "gssdrc1    %[ftmp3],   0x18(%[dc])                         \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                            \n\t"
+        "usd        %[all64],   0x00(%[dc])                         \n\t"
+        "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+        "usd        %[all64],   0x08(%[dc])                         \n\t"
+        "dmfc1      %[all64],   %[ftmp2]                            \n\t"
+        "usd        %[all64],   0x10(%[dc])                         \n\t"
+        "dmfc1      %[all64],   %[ftmp3]                            \n\t"
+        "usd        %[all64],   0x18(%[dc])                         \n\t"
+#endif
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
-          [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7])
+          [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
+          [all64]"=&r"(all64)
         : [dc]"r"((uint8_t*)dc)
         : "memory"
     );
@@ -290,6 +314,7 @@ void ff_vp8_luma_dc_wht_mmi(int16_t block[4][4][16], int16_t dc[16])
 
     __asm__ volatile (
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[dc])                         \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[dc])                         \n\t"
         "gssdlc1    %[ftmp0],   0x0f(%[dc])                         \n\t"
@@ -298,7 +323,14 @@ void ff_vp8_luma_dc_wht_mmi(int16_t block[4][4][16], int16_t dc[16])
         "gssdrc1    %[ftmp0],   0x10(%[dc])                         \n\t"
         "gssdlc1    %[ftmp0],   0x1f(%[dc])                         \n\t"
         "gssdrc1    %[ftmp0],   0x18(%[dc])                         \n\t"
-        : [ftmp0]"=&f"(ftmp[0])
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                            \n\t"
+        "usd        %[all64],   0x00(%[dc])                         \n\t"
+        "usd        %[all64],   0x08(%[dc])                         \n\t"
+        "usd        %[all64],   0x10(%[dc])                         \n\t"
+        "usd        %[all64],   0x18(%[dc])                         \n\t"
+#endif
+        : [ftmp0]"=&f"(ftmp[0]),            [all64]"=&r"(all64)
         : [dc]"r"((uint8_t *)dc)
         : "memory"
     );
@@ -405,7 +437,8 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
     DECLARE_ALIGNED(8, const uint64_t, ff_ph_35468) = {0x8a8c8a8c8a8c8a8cULL};
     double ftmp[15];
     uint64_t tmp[1];
-    uint64_t low32;
+    int low32;
+    uint64_t all64;
 
     __asm__ volatile (
         /*
@@ -470,6 +503,7 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
         "dmtc1      %[ff_ph_35468],             %[ftmp13]               \n\t"
         "dmtc1      %[ff_ph_20091],             %[ftmp14]               \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp1],   0x07(%[block])                          \n\t"
         "gsldrc1    %[ftmp1],   0x00(%[block])                          \n\t"
         "gsldlc1    %[ftmp2],   0x0f(%[block])                          \n\t"
@@ -478,6 +512,16 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "gsldrc1    %[ftmp3],   0x10(%[block])                          \n\t"
         "gsldlc1    %[ftmp4],   0x1f(%[block])                          \n\t"
         "gsldrc1    %[ftmp4],   0x18(%[block])                          \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[block])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp1]                                \n\t"
+        "uld        %[all64],   0x08(%[block])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp2]                                \n\t"
+        "uld        %[all64],   0x10(%[block])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp3]                                \n\t"
+        "uld        %[all64],   0x18(%[block])                          \n\t"
+        "dmtc1      %[all64],   %[ftmp4]                                \n\t"
+#endif
 
         "pmulhh     %[ftmp9],   %[ftmp2],       %[ftmp13]               \n\t"
         "pmulhh     %[ftmp10],  %[ftmp4],       %[ftmp14]               \n\t"
@@ -491,6 +535,7 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "psubh      %[ftmp7],   %[ftmp9],       %[ftmp10]               \n\t"
         "paddh      %[ftmp8],   %[ftmp11],      %[ftmp12]               \n\t"
 
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[block])                          \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[block])                          \n\t"
         "gssdlc1    %[ftmp0],   0x0f(%[block])                          \n\t"
@@ -499,6 +544,13 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "gssdrc1    %[ftmp0],   0x10(%[block])                          \n\t"
         "gssdlc1    %[ftmp0],   0x1f(%[block])                          \n\t"
         "gssdrc1    %[ftmp0],   0x18(%[block])                          \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                                \n\t"
+        "usd        %[all64],   0x00(%[block])                          \n\t"
+        "usd        %[all64],   0x08(%[block])                          \n\t"
+        "usd        %[all64],   0x10(%[block])                          \n\t"
+        "usd        %[all64],   0x18(%[block])                          \n\t"
+#endif
 
         "paddh     %[ftmp1],   %[ftmp5],       %[ftmp8]                 \n\t"
         "paddh     %[ftmp2],   %[ftmp6],       %[ftmp7]                 \n\t"
@@ -582,13 +634,13 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "psrah      %[ftmp13],  %[ftmp13],      %[ftmp0]                \n\t"
 
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]                \n\t"
-        "uld        %[low32],   0x00(%[dst0])                           \n\t"
+        "ulw        %[low32],   0x00(%[dst0])                           \n\t"
         "mtc1       %[low32],   %[ftmp1]                                \n\t"
-        "uld        %[low32],   0x00(%[dst1])                           \n\t"
+        "ulw        %[low32],   0x00(%[dst1])                           \n\t"
         "mtc1       %[low32],   %[ftmp2]                                \n\t"
-        "uld        %[low32],   0x00(%[dst2])                           \n\t"
+        "ulw        %[low32],   0x00(%[dst2])                           \n\t"
         "mtc1       %[low32],   %[ftmp3]                                \n\t"
-        "uld        %[low32],   0x00(%[dst3])                           \n\t"
+        "ulw        %[low32],   0x00(%[dst3])                           \n\t"
         "mtc1       %[low32],   %[ftmp4]                                \n\t"
         "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]                \n\t"
         "punpcklbh  %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
@@ -612,6 +664,7 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "packushb   %[ftmp2],   %[ftmp2],       %[ftmp0]                \n\t"
         "packushb   %[ftmp3],   %[ftmp3],       %[ftmp0]                \n\t"
         "packushb   %[ftmp4],   %[ftmp4],       %[ftmp0]                \n\t"
+#if HAVE_LOONGSON3
         "gsswlc1    %[ftmp1],   0x03(%[dst0])                           \n\t"
         "gsswrc1    %[ftmp1],   0x00(%[dst0])                           \n\t"
         "gsswlc1    %[ftmp2],   0x03(%[dst1])                           \n\t"
@@ -620,6 +673,16 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "gsswrc1    %[ftmp3],   0x00(%[dst2])                           \n\t"
         "gsswlc1    %[ftmp4],   0x03(%[dst3])                           \n\t"
         "gsswrc1    %[ftmp4],   0x00(%[dst3])                           \n\t"
+#elif HAVE_LOONGSON2
+        "mfc1       %[low32],   %[ftmp1]                                \n\t"
+        "usw        %[low32],   0x00(%[dst0])                           \n\t"
+        "mfc1       %[low32],   %[ftmp2]                                \n\t"
+        "usw        %[low32],   0x00(%[dst1])                           \n\t"
+        "mfc1       %[low32],   %[ftmp3]                                \n\t"
+        "usw        %[low32],   0x00(%[dst2])                           \n\t"
+        "mfc1       %[low32],   %[ftmp4]                                \n\t"
+        "usw        %[low32],   0x00(%[dst3])                           \n\t"
+#endif
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
@@ -629,7 +692,7 @@ void ff_vp8_idct_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
           [ftmp12]"=&f"(ftmp[12]),          [ftmp13]"=&f"(ftmp[13]),
           [ftmp14]"=&f"(ftmp[14]),
           [tmp0]"=&r"(tmp[0]),
-          [low32]"=&r"(low32)
+          [low32]"=&r"(low32),              [all64]"=&r"(all64)
         : [dst0]"r"(dst),                   [dst1]"r"(dst+stride),
           [dst2]"r"(dst+2*stride),          [dst3]"r"(dst+3*stride),
           [block]"r"(block),                [ff_pw_4]"f"(ff_pw_4),
@@ -676,20 +739,20 @@ void ff_vp8_idct_dc_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
 #if OK
     int dc = (block[0] + 4) >> 3;
     double ftmp[6];
-    uint64_t low32;
+    int low32;
 
     block[0] = 0;
 
     __asm__ volatile (
         "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]             \n\t"
         "mtc1       %[dc],      %[ftmp5]                             \n\t"
-        "uld        %[low32],   0x00(%[dst0])                        \n\t"
+        "ulw        %[low32],   0x00(%[dst0])                        \n\t"
         "mtc1       %[low32],   %[ftmp1]                             \n\t"
-        "uld        %[low32],   0x00(%[dst1])                        \n\t"
+        "ulw        %[low32],   0x00(%[dst1])                        \n\t"
         "mtc1       %[low32],   %[ftmp2]                             \n\t"
-        "uld        %[low32],   0x00(%[dst2])                        \n\t"
+        "ulw        %[low32],   0x00(%[dst2])                        \n\t"
         "mtc1       %[low32],   %[ftmp3]                             \n\t"
-        "uld        %[low32],   0x00(%[dst3])                        \n\t"
+        "ulw        %[low32],   0x00(%[dst3])                        \n\t"
         "mtc1       %[low32],   %[ftmp4]                             \n\t"
         "pshufh     %[ftmp5],   %[ftmp5],       %[ftmp0]             \n\t"
         "punpcklbh  %[ftmp1],   %[ftmp1],       %[ftmp0]             \n\t"
@@ -704,6 +767,7 @@ void ff_vp8_idct_dc_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "packushb   %[ftmp2],   %[ftmp2],       %[ftmp0]             \n\t"
         "packushb   %[ftmp3],   %[ftmp3],       %[ftmp0]             \n\t"
         "packushb   %[ftmp4],   %[ftmp4],       %[ftmp0]             \n\t"
+#if HAVE_LOONGSON3
         "gsswlc1    %[ftmp1],   0x03(%[dst0])                        \n\t"
         "gsswrc1    %[ftmp1],   0x00(%[dst0])                        \n\t"
         "gsswlc1    %[ftmp2],   0x03(%[dst1])                        \n\t"
@@ -712,6 +776,16 @@ void ff_vp8_idct_dc_add_mmi(uint8_t *dst, int16_t block[16], ptrdiff_t stride)
         "gsswrc1    %[ftmp3],   0x00(%[dst2])                        \n\t"
         "gsswlc1    %[ftmp4],   0x03(%[dst3])                        \n\t"
         "gsswrc1    %[ftmp4],   0x00(%[dst3])                        \n\t"
+#elif HAVE_LOONGSON2
+        "mfc1       %[low32],   %[ftmp1]                             \n\t"
+        "usw        %[low32],   0x00(%[dst0])                        \n\t"
+        "mfc1       %[low32],   %[ftmp2]                             \n\t"
+        "usw        %[low32],   0x00(%[dst1])                        \n\t"
+        "mfc1       %[low32],   %[ftmp3]                             \n\t"
+        "usw        %[low32],   0x00(%[dst2])                        \n\t"
+        "mfc1       %[low32],   %[ftmp4]                             \n\t"
+        "usw        %[low32],   0x00(%[dst3])                        \n\t"
+#endif
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
           [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
@@ -867,26 +941,47 @@ void ff_put_vp8_pixels16_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     double ftmp[2];
     uint64_t tmp[2];
     mips_reg addr[2];
+    uint64_t all64;
 
     __asm__ volatile (
         "1:                                                         \n\t"
         PTR_ADDU   "%[addr0],   %[src],         %[srcstride]        \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp0],   0x07(%[src])                        \n\t"
         "gsldrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[src])                        \n\t"
+        "dmtc1      %[all64],   %[ftmp0]                            \n\t"
+#endif
         "ldl        %[tmp0],    0x0f(%[src])                        \n\t"
         "ldr        %[tmp0],    0x08(%[src])                        \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp1],   0x07(%[addr0])                      \n\t"
         "gsldrc1    %[ftmp1],   0x00(%[addr0])                      \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[addr0])                      \n\t"
+        "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
         "ldl        %[tmp1],    0x0f(%[addr0])                      \n\t"
         "ldr        %[tmp1],    0x08(%[addr0])                      \n\t"
         PTR_ADDU   "%[addr1],   %[dst],         %[dststride]        \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[dst])                        \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                            \n\t"
+        "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
         "sdl        %[tmp0],    0x0f(%[dst])                        \n\t"
         "sdr        %[tmp0],    0x08(%[dst])                        \n\t"
         "daddi      %[h],       %[h],           -0x02               \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp1],   0x07(%[addr1])                      \n\t"
         "gssdrc1    %[ftmp1],   0x00(%[addr1])                      \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+        "usd        %[all64],   0x00(%[addr1])                      \n\t"
+#endif
         PTR_ADDU   "%[src],     %[addr0],       %[srcstride]        \n\t"
         "sdl        %[tmp1],    0x0f(%[addr1])                      \n\t"
         "sdr        %[tmp1],    0x08(%[addr1])                      \n\t"
@@ -895,6 +990,7 @@ void ff_put_vp8_pixels16_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
           [tmp0]"=&r"(tmp[0]),              [tmp1]"=&r"(tmp[1]),
           [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
+          [all64]"=&r"(all64),
           [dst]"+&r"(dst),                  [src]"+&r"(src),
           [h]"+&r"(h)
         : [dststride]"r"((mips_reg)dststride),
@@ -916,17 +1012,28 @@ void ff_put_vp8_pixels8_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     double ftmp[1];
     uint64_t tmp[1];
     mips_reg addr[2];
+    uint64_t all64;
 
     __asm__ volatile (
         "1:                                                         \n\t"
         PTR_ADDU   "%[addr0],   %[src],         %[srcstride]        \n\t"
+#if HAVE_LOONGSON3
         "gsldlc1    %[ftmp0],   0x07(%[src])                        \n\t"
         "gsldrc1    %[ftmp0],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+        "uld        %[all64],   0x00(%[src])                        \n\t"
+        "dmtc1      %[all64],   %[ftmp0]                            \n\t"
+#endif
         "ldl        %[tmp0],    0x07(%[addr0])                      \n\t"
         "ldr        %[tmp0],    0x00(%[addr0])                      \n\t"
         PTR_ADDU   "%[addr1],   %[dst],         %[dststride]        \n\t"
+#if HAVE_LOONGSON3
         "gssdlc1    %[ftmp0],   0x07(%[dst])                        \n\t"
         "gssdrc1    %[ftmp0],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+        "dmfc1      %[all64],   %[ftmp0]                            \n\t"
+        "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
         "daddi      %[h],       %[h],           -0x02               \n\t"
         "sdl        %[tmp0],    0x07(%[addr1])                      \n\t"
         "sdr        %[tmp0],    0x00(%[addr1])                      \n\t"
@@ -935,6 +1042,7 @@ void ff_put_vp8_pixels8_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         "bnez       %[h],       1b                                  \n\t"
         : [ftmp0]"=&f"(ftmp[0]),            [tmp0]"=&r"(tmp[0]),
           [addr0]"=&r"(addr[0]),            [addr1]"=&r"(addr[1]),
+          [all64]"=&r"(all64),
           [dst]"+&r"(dst),                  [src]"+&r"(src),
           [h]"+&r"(h)
         : [dststride]"r"((mips_reg)dststride),
@@ -956,18 +1064,23 @@ void ff_put_vp8_pixels4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     double ftmp[1];
     uint64_t tmp[1];
     mips_reg addr[2];
-    uint64_t low32;
+    int low32;
 
     __asm__ volatile (
         "1:                                                         \n\t"
         PTR_ADDU   "%[addr0],   %[src],         %[srcstride]        \n\t"
-        "uld        %[low32],   0x00(%[src])                        \n\t"
+        "ulw        %[low32],   0x00(%[src])                        \n\t"
         "mtc1       %[low32],   %[ftmp0]                            \n\t"
         "lwl        %[tmp0],    0x03(%[addr0])                      \n\t"
         "lwr        %[tmp0],    0x00(%[addr0])                      \n\t"
         PTR_ADDU   "%[addr1],   %[dst],         %[dststride]        \n\t"
+#if HAVE_LOONGSON3
         "gsswlc1    %[ftmp0],   0x03(%[dst])                        \n\t"
         "gsswrc1    %[ftmp0],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+        "mfc1       %[low32],   %[ftmp0]                            \n\t"
+        "usw        %[low32],   0x00(%[dst])                        \n\t"
+#endif
         "daddi      %[h],       %[h],           -0x02               \n\t"
         "swl        %[tmp0],    0x03(%[addr1])                      \n\t"
         "swr        %[tmp0],    0x00(%[addr1])                      \n\t"
@@ -1018,6 +1131,7 @@ void ff_put_vp8_epel16_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[10];
     uint64_t tmp[1];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -1041,11 +1155,19 @@ void ff_put_vp8_epel16_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1056,11 +1178,19 @@ void ff_put_vp8_epel16_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0e(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x07(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x07(%[src])                        \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1075,11 +1205,19 @@ void ff_put_vp8_epel16_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0c(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x06(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x06(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1094,11 +1232,19 @@ void ff_put_vp8_epel16_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x11(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x0a(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x0a(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1121,16 +1267,24 @@ void ff_put_vp8_epel16_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp1],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x08(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                    [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),          [filter2]"r"(filter[2]),
@@ -1162,6 +1316,7 @@ void ff_put_vp8_epel8_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[7];
     uint64_t tmp[1];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -1176,18 +1331,30 @@ void ff_put_vp8_epel8_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1196,9 +1363,15 @@ void ff_put_vp8_epel8_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1207,9 +1380,15 @@ void ff_put_vp8_epel8_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1226,13 +1405,19 @@ void ff_put_vp8_epel8_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                    [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),          [filter2]"r"(filter[2]),
@@ -1264,7 +1449,7 @@ void ff_put_vp8_epel4_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[5];
     uint64_t tmp[1];
-    uint64_t low32;
+    int low32;
 
     for (y = 0; y < h; y++) {
         /*
@@ -1275,14 +1460,14 @@ void ff_put_vp8_epel4_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "ulw        %[low32],   0x00(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "ulw        %[low32],   -0x01(%[src])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -1290,7 +1475,7 @@ void ff_put_vp8_epel4_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "ulw        %[low32],   0x01(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -1298,7 +1483,7 @@ void ff_put_vp8_epel4_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "ulw        %[low32],   0x02(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -1312,8 +1497,13 @@ void ff_put_vp8_epel4_h4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[dst])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
@@ -1350,6 +1540,7 @@ void ff_put_vp8_epel16_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[10];
     uint64_t tmp[1];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -1373,11 +1564,19 @@ void ff_put_vp8_epel16_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1388,11 +1587,19 @@ void ff_put_vp8_epel16_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0e(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x07(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x07(%[src])                        \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1407,11 +1614,19 @@ void ff_put_vp8_epel16_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x05(%[src])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x02(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x02(%[src])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0d(%[src])                        \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x06(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x02(%[src])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x06(%[src])                        \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1426,11 +1641,19 @@ void ff_put_vp8_epel16_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x10(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x09(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x09(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1445,11 +1668,19 @@ void ff_put_vp8_epel16_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x11(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x0a(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x0a(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1464,11 +1695,19 @@ void ff_put_vp8_epel16_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x0a(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x03(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x12(%[src])                        \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x0b(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x03(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x0b(%[src])                        \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1496,16 +1735,24 @@ void ff_put_vp8_epel16_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
             "packushb   %[ftmp2],   %[ftmp8],       %[ftmp9]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp2],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp2],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp2]                            \n\t"
+            "usd        %[all64],   0x08(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                    [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),          [filter1]"r"(filter[1]),
@@ -1539,6 +1786,7 @@ void ff_put_vp8_epel8_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[7];
     uint64_t tmp[1];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -1553,18 +1801,30 @@ void ff_put_vp8_epel8_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1573,9 +1833,15 @@ void ff_put_vp8_epel8_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x05(%[src])                        \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x02(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x02(%[src])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x02(%[src])                       \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1584,9 +1850,15 @@ void ff_put_vp8_epel8_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1595,9 +1867,15 @@ void ff_put_vp8_epel8_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1606,9 +1884,15 @@ void ff_put_vp8_epel8_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x0a(%[src])                        \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x03(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x03(%[src])                        \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1625,13 +1909,19 @@ void ff_put_vp8_epel8_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                    [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),          [filter1]"r"(filter[1]),
@@ -1665,7 +1955,7 @@ void ff_put_vp8_epel4_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[6];
     uint64_t tmp[1];
-    uint64_t low32;
+    int low32;
 
     for (y = 0; y < h; y++) {
         /*
@@ -1676,14 +1966,14 @@ void ff_put_vp8_epel4_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "ulw        %[low32],   0x00(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
 
-            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "ulw        %[low32],   -0x01(%[src])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
@@ -1691,7 +1981,7 @@ void ff_put_vp8_epel4_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],  -0x02(%[src])                        \n\t"
+            "ulw        %[low32],   -0x02(%[src])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
@@ -1699,7 +1989,7 @@ void ff_put_vp8_epel4_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "ulw        %[low32],   0x01(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
@@ -1707,7 +1997,7 @@ void ff_put_vp8_epel4_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "ulw        %[low32],   0x02(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
@@ -1715,7 +2005,7 @@ void ff_put_vp8_epel4_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp4]            \n\t"
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x03(%[src])                        \n\t"
+            "ulw        %[low32],   0x03(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
@@ -1729,8 +2019,13 @@ void ff_put_vp8_epel4_h6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp5],   %[ftmp5],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[dst])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
@@ -1769,6 +2064,7 @@ void ff_put_vp8_epel16_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[10];
     uint64_t tmp[1];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -1791,12 +2087,20 @@ void ff_put_vp8_epel16_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         dst[15] = cm[(filter[2] * src[15] - filter[1] * src[15-srcstride] + filter[3] * src[15+srcstride] - filter[4] * src[15+2*srcstride] + 64) >> 7];
         */
         __asm__ volatile (
+#if HAVE_LOONGSON3
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
             "gsldlc1    %[ftmp1],   0x07(%[src0])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src0])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src0])                       \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src0])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src0])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src0])                       \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1807,11 +2111,19 @@ void ff_put_vp8_epel16_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src1])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src1])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src1])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src1])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src1])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src1])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1826,11 +2138,19 @@ void ff_put_vp8_epel16_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src2])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src2])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src2])                       \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src2])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src2])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src2])                       \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1845,11 +2165,19 @@ void ff_put_vp8_epel16_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src3])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src3])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src3])                       \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src3])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src3])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src3])                       \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1872,16 +2200,24 @@ void ff_put_vp8_epel16_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp1],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp7]                            \n\t"
+            "usd        %[all64],   0x08(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                    [src0]"r"(src),
               [src1]"r"(src-srcstride),         [src2]"r"(src+srcstride),
               [src3]"r"(src+2*srcstride),       [ff_pw_64]"f"(ff_pw_64),
@@ -1915,6 +2251,7 @@ void ff_put_vp8_epel8_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[7];
     uint64_t tmp[1];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -1929,18 +2266,30 @@ void ff_put_vp8_epel8_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src0])                       \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src0])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src0])                       \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src1])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src1])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src1])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1949,9 +2298,15 @@ void ff_put_vp8_epel8_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src2])                       \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src2])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src2])                       \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1960,9 +2315,15 @@ void ff_put_vp8_epel8_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src3])                       \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src3])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src3])                       \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -1979,13 +2340,19 @@ void ff_put_vp8_epel8_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                    [src0]"r"(src),
               [src1]"r"(src-srcstride),         [src2]"r"(src+srcstride),
               [src3]"r"(src+2*srcstride),       [ff_pw_64]"f"(ff_pw_64),
@@ -2019,7 +2386,7 @@ void ff_put_vp8_epel4_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[6];
     uint64_t tmp[1];
-    uint64_t low32;
+    int low32;
 
     for (y = 0; y < h; y++) {
         /*
@@ -2030,14 +2397,14 @@ void ff_put_vp8_epel4_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src0])                       \n\t"
+            "ulw        %[low32],   0x00(%[src0])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],   0x00(%[src1])                       \n\t"
+            "ulw        %[low32],   0x00(%[src1])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -2045,7 +2412,7 @@ void ff_put_vp8_epel4_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x00(%[src2])                       \n\t"
+            "ulw        %[low32],   0x00(%[src2])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -2053,7 +2420,7 @@ void ff_put_vp8_epel4_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x00(%[src3])                       \n\t"
+            "ulw        %[low32],   0x00(%[src3])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -2067,8 +2434,13 @@ void ff_put_vp8_epel4_v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[dst])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
@@ -2107,6 +2479,7 @@ void ff_put_vp8_epel16_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[10];
     uint64_t tmp[1];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -2130,11 +2503,19 @@ void ff_put_vp8_epel16_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src0])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src0])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src0])                       \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src0])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src0])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src0])                       \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2145,11 +2526,19 @@ void ff_put_vp8_epel16_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src1])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src1])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src1])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src1])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src1])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src1])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2164,11 +2553,19 @@ void ff_put_vp8_epel16_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src2])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src2])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src2])                       \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src2])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src2])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src2])                       \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2183,11 +2580,19 @@ void ff_put_vp8_epel16_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src3])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src3])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src3])                       \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src3])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src3])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src3])                       \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2202,11 +2607,19 @@ void ff_put_vp8_epel16_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src4])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src4])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src4])                       \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src4])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src4])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src4])                       \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2221,11 +2634,19 @@ void ff_put_vp8_epel16_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src5])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src5])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src5])                       \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src5])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src5])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src5])                       \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2253,16 +2674,24 @@ void ff_put_vp8_epel16_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
             "packushb   %[ftmp2],   %[ftmp8],       %[ftmp9]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp2],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp2],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp2]                            \n\t"
+            "usd        %[all64],   0x08(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                    [src0]"r"(src),
               [src1]"r"(src-srcstride),         [src2]"r"(src-2*srcstride),
               [src3]"r"(src+srcstride),         [src4]"r"(src+2*srcstride),
@@ -2298,6 +2727,7 @@ void ff_put_vp8_epel8_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[7];
     uint64_t tmp[1];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -2312,18 +2742,30 @@ void ff_put_vp8_epel8_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src0])                       \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src0])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src0])                       \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src1])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src1])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src1])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2332,9 +2774,15 @@ void ff_put_vp8_epel8_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src2])                       \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src2])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src2])                       \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2343,9 +2791,15 @@ void ff_put_vp8_epel8_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src3])                       \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src3])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src3])                       \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2354,9 +2808,15 @@ void ff_put_vp8_epel8_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src4])                       \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src4])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src4])                       \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2365,9 +2825,15 @@ void ff_put_vp8_epel8_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src5])                       \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src5])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src5])                       \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2384,13 +2850,19 @@ void ff_put_vp8_epel8_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp[0])
+              [tmp0]"=&r"(tmp[0]),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                    [src0]"r"(src),
               [src1]"r"(src-srcstride),         [src2]"r"(src-2*srcstride),
               [src3]"r"(src+srcstride),         [src4]"r"(src+2*srcstride),
@@ -2426,7 +2898,7 @@ void ff_put_vp8_epel4_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     int y;
     double ftmp[5];
     uint64_t tmp[1];
-    uint64_t low32;
+    int low32;
 
     for (y = 0; y < h; y++) {
         /*
@@ -2437,14 +2909,14 @@ void ff_put_vp8_epel4_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src0])                       \n\t"
+            "ulw        %[low32],   0x00(%[src0])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],   0x00(%[src1])                       \n\t"
+            "ulw        %[low32],   0x00(%[src1])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -2452,7 +2924,7 @@ void ff_put_vp8_epel4_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x00(%[src2])                       \n\t"
+            "ulw        %[low32],   0x00(%[src2])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -2460,7 +2932,7 @@ void ff_put_vp8_epel4_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x00(%[src3])                       \n\t"
+            "ulw        %[low32],   0x00(%[src3])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -2468,7 +2940,7 @@ void ff_put_vp8_epel4_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x00(%[src4])                       \n\t"
+            "ulw        %[low32],   0x00(%[src4])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -2476,7 +2948,7 @@ void ff_put_vp8_epel4_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x00(%[src5])                       \n\t"
+            "ulw        %[low32],   0x00(%[src5])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -2490,8 +2962,13 @@ void ff_put_vp8_epel4_v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[dst])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
@@ -2534,6 +3011,7 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[10];
     uint64_t tmp0;
+    uint64_t all64;
 
     src -= srcstride;
 
@@ -2559,11 +3037,19 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0], %[ftmp0]                  \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4], %[ftmp0]                  \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1], %[ftmp0]                  \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1], %[ftmp0]                  \n\t"
@@ -2574,11 +3060,19 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2], %[ftmp4]                  \n\t"
             "pmullh     %[ftmp9],   %[ftmp3], %[ftmp4]                  \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0e(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x07(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x07(%[src])                        \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4], %[ftmp0]                  \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1], %[ftmp0]                  \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1], %[ftmp0]                  \n\t"
@@ -2593,11 +3087,19 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8], %[ftmp2]                  \n\t"
             "psubush    %[ftmp9],   %[ftmp9], %[ftmp3]                  \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0d(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x06(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x06(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4], %[ftmp0]                  \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1], %[ftmp0]                  \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1], %[ftmp0]                  \n\t"
@@ -2612,11 +3114,19 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8], %[ftmp2]                  \n\t"
             "paddush    %[ftmp9],   %[ftmp9], %[ftmp3]                  \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x11(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x0a(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x0a(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4], %[ftmp0]                  \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1], %[ftmp0]                  \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1], %[ftmp0]                  \n\t"
@@ -2639,16 +3149,24 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6], %[ftmp4]                  \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5], %[ftmp6]                  \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "gssdlc1    %[ftmp1],   0x0f(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp7]                            \n\t"
+            "usd        %[all64],   0x08(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [tmp]"r"(tmp),                    [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),          [filter2]"r"(filter[2]),
@@ -2702,11 +3220,19 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[tmp])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2717,11 +3243,19 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x09(%[tmp])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x0f(%[tmp])                        \n\t"
-            "gsldlc1    %[ftmp7],  -0x01(%[tmp])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x09(%[tmp])                       \n\t"
+            "gsldrc1    %[ftmp1],   -0x0f(%[tmp])                       \n\t"
+            "gsldlc1    %[ftmp7],   -0x01(%[tmp])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp7],  -0x08(%[tmp])                        \n\t"
+            "gsldrc1    %[ftmp7],   -0x08(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x0f(%[tmp])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   -0x08(%[tmp])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2736,11 +3270,19 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x17(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x10(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x1f(%[tmp])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x18(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x10(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x18(%[tmp])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2755,11 +3297,19 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x27(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x20(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x2f(%[tmp])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x28(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x20(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x28(%[tmp])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2782,16 +3332,24 @@ void ff_put_vp8_epel16_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp1],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[dst])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[dst])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                    [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),          [filter2]"r"(filter[2]),
@@ -2822,6 +3380,7 @@ void ff_put_vp8_epel8_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[7];
     uint64_t tmp0;
+    uint64_t all64;
 
     src -= srcstride;
 
@@ -2838,18 +3397,30 @@ void ff_put_vp8_epel8_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2858,9 +3429,15 @@ void ff_put_vp8_epel8_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2869,9 +3446,15 @@ void ff_put_vp8_epel8_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2888,13 +3471,19 @@ void ff_put_vp8_epel8_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [tmp]"r"(tmp),                    [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),          [filter2]"r"(filter[2]),
@@ -2939,18 +3528,30 @@ void ff_put_vp8_epel8_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[tmp])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x01(%[tmp])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x01(%[tmp])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x08(%[tmp])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x08(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x08(%[tmp])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2959,9 +3560,15 @@ void ff_put_vp8_epel8_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x0f(%[tmp])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2970,9 +3577,15 @@ void ff_put_vp8_epel8_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x17(%[tmp])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x10(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x10(%[tmp])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -2989,13 +3602,19 @@ void ff_put_vp8_epel8_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                    [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),          [filter2]"r"(filter[2]),
@@ -3026,7 +3645,7 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[5];
     uint64_t tmp0;
-    uint64_t low32;
+    int low32;
 
     src -= srcstride;
 
@@ -3039,14 +3658,14 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "ulw        %[low32],   0x00(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "ulw        %[low32],   -0x01(%[src])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3054,7 +3673,7 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "ulw        %[low32],   0x01(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3062,7 +3681,7 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "ulw        %[low32],   0x02(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3076,8 +3695,13 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[tmp])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
@@ -3123,14 +3747,14 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x00(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],  -0x04(%[tmp])                        \n\t"
+            "ulw        %[low32],   -0x04(%[tmp])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3138,7 +3762,7 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x04(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x04(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3146,7 +3770,7 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x08(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x08(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3160,8 +3784,13 @@ void ff_put_vp8_epel4_h4v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[dst])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
@@ -3197,6 +3826,7 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[10];
     uint64_t tmp0;
+    uint64_t all64;
 
     src -= 2 * srcstride;
 
@@ -3222,11 +3852,19 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3237,11 +3875,19 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0e(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x07(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x07(%[src])                        \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3256,11 +3902,19 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0d(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x06(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x06(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3275,11 +3929,19 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x11(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x0a(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x0a(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3302,16 +3964,24 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "gssdlc1    %[ftmp1],   0x0f(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x08(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),            [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),            [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),            [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),            [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),            [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [tmp]"r"(tmp),                    [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),          [filter2]"r"(filter[2]),
@@ -3365,11 +4035,19 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[tmp])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3380,11 +4058,19 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x09(%[tmp])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x10(%[tmp])                        \n\t"
-            "gsldlc1    %[ftmp7],  -0x08(%[tmp])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x09(%[tmp])                       \n\t"
+            "gsldrc1    %[ftmp1],   -0x10(%[tmp])                       \n\t"
+            "gsldlc1    %[ftmp7],   -0x08(%[tmp])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp7],  -0x01(%[tmp])                        \n\t"
+            "gsldrc1    %[ftmp7],   -0x01(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x10(%[tmp])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   -0x01(%[tmp])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3399,11 +4085,19 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x19(%[tmp])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x20(%[tmp])                        \n\t"
-            "gsldlc1    %[ftmp7],  -0x11(%[tmp])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x19(%[tmp])                       \n\t"
+            "gsldrc1    %[ftmp1],   -0x20(%[tmp])                       \n\t"
+            "gsldlc1    %[ftmp7],   -0x11(%[tmp])                       \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp7],  -0x18(%[tmp])                        \n\t"
+            "gsldrc1    %[ftmp7],   -0x18(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x20(%[tmp])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   -0x18(%[tmp])                       \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3418,11 +4112,19 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x18(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x11(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x20(%[tmp])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x19(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x11(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x19(%[tmp])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3437,11 +4139,19 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x27(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x20(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x2f(%[tmp])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x28(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x20(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x28(%[tmp])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3456,11 +4166,19 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x37(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x30(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x3f(%[tmp])                        \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x38(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x30(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x38(%[tmp])                        \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3488,16 +4206,24 @@ void ff_put_vp8_epel16_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
             "packushb   %[ftmp2],   %[ftmp8],       %[ftmp9]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp2],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp2],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp2]                            \n\t"
+            "usd        %[all64],   0x08(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -3529,6 +4255,7 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[7];
     uint64_t tmp0;
+    uint64_t all64;
 
     src -= 2 * srcstride;
 
@@ -3545,18 +4272,30 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3565,9 +4304,15 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3576,9 +4321,15 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3595,13 +4346,19 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [tmp]"r"(tmp),                [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),      [filter2]"r"(filter[2]),
@@ -3646,18 +4403,30 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[tmp])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
-            "gsldlc1    %[ftmp1], -0x01(%[tmp])                         \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x01(%[tmp])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1], -0x08(%[tmp])                         \n\t"
+            "gsldrc1    %[ftmp1],   -0x08(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x08(%[tmp])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3666,9 +4435,15 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x09(%[tmp])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x09(%[tmp])                       \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x10(%[tmp])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x10(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x10(%[tmp])                       \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3677,9 +4452,15 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x0f(%[tmp])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3688,9 +4469,15 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x17(%[tmp])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x10(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x10(%[tmp])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3699,9 +4486,15 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x1f(%[tmp])                        \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x18(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x18(%[tmp])                        \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3718,13 +4511,19 @@ void ff_put_vp8_epel8_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -3756,7 +4555,7 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[5];
     uint64_t tmp0;
-    uint64_t low32;
+    int low32;
 
     src -= 2 * srcstride;
 
@@ -3769,14 +4568,14 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "ulw        %[low32],   0x00(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "ulw        %[low32],   -0x01(%[src])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3784,7 +4583,7 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "ulw        %[low32],   0x01(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3792,7 +4591,7 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "ulw        %[low32],   0x02(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3806,8 +4605,13 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[tmp])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
@@ -3853,14 +4657,14 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x00(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],  -0x04(%[tmp])                        \n\t"
+            "ulw        %[low32],   -0x04(%[tmp])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3868,7 +4672,7 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],  -0x08(%[tmp])                        \n\t"
+            "ulw        %[low32],   -0x08(%[tmp])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3876,7 +4680,7 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x04(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x04(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3884,7 +4688,7 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x08(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x08(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3892,7 +4696,7 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x0c(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x0c(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -3906,8 +4710,13 @@ void ff_put_vp8_epel4_h4v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[dst])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
@@ -3944,6 +4753,7 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[10];
     uint64_t tmp0;
+    uint64_t all64;
 
     src -= srcstride;
 
@@ -3969,11 +4779,19 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -3984,11 +4802,19 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0e(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x07(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x07(%[src])                        \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4003,11 +4829,19 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x05(%[src])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x02(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x02(%[src])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0d(%[src])                        \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x06(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x02(%[src])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x06(%[src])                        \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4022,11 +4856,19 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x10(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x09(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x09(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4041,11 +4883,19 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x11(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x0a(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x0a(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4060,11 +4910,19 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x0a(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x03(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x12(%[src])                        \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x0b(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x03(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x0b(%[src])                        \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4092,16 +4950,24 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
             "packushb   %[ftmp2],   %[ftmp8],       %[ftmp9]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "gssdlc1    %[ftmp2],   0x0f(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp2],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp2]                            \n\t"
+            "usd        %[all64],   0x08(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [tmp]"r"(tmp),                [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -4156,11 +5022,19 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4171,11 +5045,19 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x09(%[src])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x10(%[src])                        \n\t"
-            "gsldlc1    %[ftmp7],  -0x01(%[src])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x09(%[src])                       \n\t"
+            "gsldrc1    %[ftmp1],   -0x10(%[src])                       \n\t"
+            "gsldlc1    %[ftmp7],   -0x01(%[src])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp7],  -0x08(%[src])                        \n\t"
+            "gsldrc1    %[ftmp7],   -0x08(%[src])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x10(%[src])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   -0x08(%[src])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4190,11 +5072,19 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0d(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x06(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x06(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4209,11 +5099,19 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x11(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x0a(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x0a(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4236,16 +5134,24 @@ void ff_put_vp8_epel16_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp1],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x08(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),      [filter2]"r"(filter[2]),
@@ -4276,6 +5182,7 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[7];
     uint64_t tmp0;
+    uint64_t all64;
 
     src -= srcstride;
 
@@ -4292,18 +5199,30 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4312,9 +5231,15 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x05(%[src])                        \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x02(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x02(%[src])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x02(%[src])                       \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4323,9 +5248,15 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4334,9 +5265,15 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4345,9 +5282,15 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x0a(%[src])                        \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x03(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x03(%[src])                        \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4364,13 +5307,19 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [tmp]"r"(tmp),                [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -4416,18 +5365,30 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[tmp])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x01(%[tmp])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x01(%[tmp])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x08(%[tmp])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x08(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x08(%[tmp])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4436,9 +5397,15 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x0f(%[tmp])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4447,9 +5414,15 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x17(%[tmp])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x10(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x10(%[tmp])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4466,13 +5439,19 @@ void ff_put_vp8_epel8_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter1]"r"(filter[1]),      [filter2]"r"(filter[2]),
@@ -4503,7 +5482,7 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[7];
     uint64_t tmp0;
-    uint64_t low32;
+    int low32;
 
     src -= srcstride;
 
@@ -4516,14 +5495,14 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "ulw        %[low32],   0x00(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "ulw        %[low32],   -0x01(%[src])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -4531,7 +5510,7 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],  -0x02(%[src])                        \n\t"
+            "ulw        %[low32],   -0x02(%[src])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -4539,7 +5518,7 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "ulw        %[low32],   0x01(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -4547,7 +5526,7 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "ulw        %[low32],   0x02(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -4555,7 +5534,7 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x03(%[src])                        \n\t"
+            "ulw        %[low32],   0x03(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -4569,8 +5548,13 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[tmp])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
@@ -4617,14 +5601,14 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x00(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],  -0x04(%[tmp])                        \n\t"
+            "ulw        %[low32],   -0x04(%[tmp])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -4632,7 +5616,7 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x04(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x04(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -4640,7 +5624,7 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x08(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x08(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -4654,8 +5638,13 @@ void ff_put_vp8_epel4_h6v4_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[dst])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
@@ -4692,6 +5681,7 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[10];
     uint64_t tmp0;
+    uint64_t all64;
 
     src -= 2 * srcstride;
 
@@ -4717,11 +5707,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4732,11 +5730,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0e(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x07(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x07(%[src])                        \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4751,11 +5757,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x05(%[src])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x02(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x02(%[src])                       \n\t"
             "gsldlc1    %[ftmp7],   0x0d(%[src])                        \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x06(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x02(%[src])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x06(%[src])                        \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4770,11 +5784,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x10(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x09(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x09(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4789,11 +5811,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x11(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x0a(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x0a(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4808,11 +5838,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x0a(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x03(%[src])                        \n\t"
             "gsldlc1    %[ftmp7],   0x12(%[src])                        \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x0b(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x03(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x0b(%[src])                        \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4840,16 +5878,24 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
             "packushb   %[ftmp2],   %[ftmp8],       %[ftmp9]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "gssdlc1    %[ftmp2],   0x0f(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp2],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp2]                            \n\t"
+            "usd        %[all64],   0x08(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [tmp]"r"(tmp),                [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -4904,11 +5950,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x0f(%[tmp])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4919,11 +5973,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp8],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp9],   %[ftmp3],       %[ftmp4]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x09(%[tmp])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x10(%[tmp])                        \n\t"
-            "gsldlc1    %[ftmp7],  -0x01(%[tmp])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x09(%[tmp])                       \n\t"
+            "gsldrc1    %[ftmp1],   -0x10(%[tmp])                       \n\t"
+            "gsldlc1    %[ftmp7],   -0x01(%[tmp])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp7],  -0x08(%[tmp])                        \n\t"
+            "gsldrc1    %[ftmp7],   -0x08(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x10(%[tmp])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   -0x08(%[tmp])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4938,11 +6000,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x19(%[tmp])                        \n\t"
-            "gsldrc1    %[ftmp1],  -0x20(%[tmp])                        \n\t"
-            "gsldlc1    %[ftmp7],  -0x11(%[tmp])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x19(%[tmp])                       \n\t"
+            "gsldrc1    %[ftmp1],   -0x20(%[tmp])                       \n\t"
+            "gsldlc1    %[ftmp7],   -0x11(%[tmp])                       \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp7],  -0x18(%[tmp])                        \n\t"
+            "gsldrc1    %[ftmp7],   -0x18(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x20(%[tmp])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   -0x18(%[tmp])                       \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4957,11 +6027,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x17(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x10(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x1f(%[tmp])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x18(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x10(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x18(%[tmp])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4976,11 +6054,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "paddush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x27(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x20(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x2f(%[tmp])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x28(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x20(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x28(%[tmp])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -4995,11 +6081,19 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp8],   %[ftmp8],       %[ftmp2]            \n\t"
             "psubush    %[ftmp9],   %[ftmp9],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x37(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x30(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp7],   0x3f(%[tmp])                        \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp7],   0x38(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x30(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x38(%[tmp])                        \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp7]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5027,16 +6121,24 @@ void ff_put_vp8_epel16_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
             "packushb   %[ftmp2],   %[ftmp8],       %[ftmp9]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp2],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp2],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp2]                            \n\t"
+            "usd        %[all64],   0x08(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),        [ftmp9]"=&f"(ftmp[9]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -5068,6 +6170,7 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[7];
     uint64_t tmp0;
+    uint64_t all64;
 
     src -= 2 * srcstride;
 
@@ -5084,18 +6187,30 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x06(%[src])                        \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x01(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x01(%[src])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x01(%[src])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5104,9 +6219,15 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x05(%[src])                        \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x02(%[src])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x02(%[src])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x02(%[src])                       \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5115,9 +6236,15 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x08(%[src])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x01(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5126,9 +6253,15 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x09(%[src])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x02(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x02(%[src])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5137,9 +6270,15 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x0a(%[src])                        \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x03(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x03(%[src])                        \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5156,13 +6295,19 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [tmp]"r"(tmp),                [src]"r"(src),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -5208,18 +6353,30 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "mtc1       %[filter2], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[tmp])                        \n\t"
+            "mtc1       %[filter2], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp5],   %[ftmp2],       %[ftmp4]            \n\t"
             "pmullh     %[ftmp6],   %[ftmp3],       %[ftmp4]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x01(%[tmp])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x01(%[tmp])                       \n\t"
             "mtc1       %[filter1], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x08(%[tmp])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x08(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x08(%[tmp])                       \n\t"
+            "mtc1       %[filter1], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5228,9 +6385,15 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
-            "gsldlc1    %[ftmp1],  -0x09(%[tmp])                        \n\t"
+#if HAVE_LOONGSON3
+            "gsldlc1    %[ftmp1],   -0x09(%[tmp])                       \n\t"
             "mtc1       %[filter0], %[ftmp4]                            \n\t"
-            "gsldrc1    %[ftmp1],  -0x10(%[tmp])                        \n\t"
+            "gsldrc1    %[ftmp1],   -0x10(%[tmp])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   -0x10(%[tmp])                       \n\t"
+            "mtc1       %[filter0], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5239,9 +6402,15 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x0f(%[tmp])                        \n\t"
             "mtc1       %[filter3], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[filter3], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5250,9 +6419,15 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "paddush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "paddush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x17(%[tmp])                        \n\t"
             "mtc1       %[filter4], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x10(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x10(%[tmp])                        \n\t"
+            "mtc1       %[filter4], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5261,9 +6436,15 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psubush    %[ftmp5],   %[ftmp5],       %[ftmp2]            \n\t"
             "psubush    %[ftmp6],   %[ftmp6],       %[ftmp3]            \n\t"
 
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x1f(%[tmp])                        \n\t"
             "mtc1       %[filter5], %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x18(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x18(%[tmp])                        \n\t"
+            "mtc1       %[filter5], %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp3],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5280,13 +6461,19 @@ void ff_put_vp8_epel8_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp6],   %[ftmp6],       %[ftmp4]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),
-              [tmp0]"=&r"(tmp0)
+              [tmp0]"=&r"(tmp0),
+              [all64]"=&r"(all64)
             : [dst]"r"(dst),                [tmp]"r"(tmp),
               [ff_pw_64]"f"(ff_pw_64),
               [filter0]"r"(filter[0]),      [filter1]"r"(filter[1]),
@@ -5317,7 +6504,7 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
     uint8_t *tmp = tmp_array;
     double ftmp[5];
     uint64_t tmp0;
-    uint64_t low32;
+    int low32;
 
     src -= 2 * srcstride;
 
@@ -5330,14 +6517,14 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "ulw        %[low32],   0x00(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],  -0x01(%[src])                        \n\t"
+            "ulw        %[low32],   -0x01(%[src])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -5345,7 +6532,7 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],  -0x02(%[src])                        \n\t"
+            "ulw        %[low32],   -0x02(%[src])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -5353,7 +6540,7 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "ulw        %[low32],   0x01(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -5361,7 +6548,7 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x02(%[src])                        \n\t"
+            "ulw        %[low32],   0x02(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -5369,7 +6556,7 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x03(%[src])                        \n\t"
+            "ulw        %[low32],   0x03(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -5383,8 +6570,13 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[tmp])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
@@ -5431,14 +6623,14 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x00(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter2], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
             "pmullh     %[ftmp4],   %[ftmp2],       %[ftmp3]            \n\t"
 
-            "uld        %[low32],  -0x04(%[tmp])                        \n\t"
+            "ulw        %[low32],   -0x04(%[tmp])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter1], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -5446,7 +6638,7 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],  -0x08(%[tmp])                        \n\t"
+            "ulw        %[low32],   -0x08(%[tmp])                       \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter0], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -5454,7 +6646,7 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x04(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x04(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter3], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -5462,7 +6654,7 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "paddush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x08(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x08(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter4], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -5470,7 +6662,7 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "pmullh     %[ftmp2],   %[ftmp2],       %[ftmp3]            \n\t"
             "psubush    %[ftmp4],   %[ftmp4],       %[ftmp2]            \n\t"
 
-            "uld        %[low32],   0x0c(%[tmp])                        \n\t"
+            "ulw        %[low32],   0x0c(%[tmp])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[filter5], %[ftmp3]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -5484,8 +6676,13 @@ void ff_put_vp8_epel4_h6v6_mmi(uint8_t *dst, ptrdiff_t dststride, uint8_t *src,
             "psrlh      %[ftmp4],   %[ftmp4],       %[ftmp3]            \n\t"
 
             "packushb   %[ftmp1],   %[ftmp4],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsswlc1    %[ftmp1],   0x03(%[dst])                        \n\t"
             "gsswrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "mfc1       %[low32],   %[ftmp1]                            \n\t"
+            "usw        %[low32],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
@@ -5519,6 +6716,7 @@ void ff_put_vp8_bilinear16_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     int a = 8 - mx, b = mx;
     int y;
     double ftmp[15];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -5542,6 +6740,7 @@ void ff_put_vp8_bilinear16_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp2],   0x0f(%[src])                        \n\t"
@@ -5552,6 +6751,18 @@ void ff_put_vp8_bilinear16_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "gsldlc1    %[ftmp4],   0x10(%[src])                        \n\t"
             "mtc1       %[b],       %[ftmp14]                           \n\t"
             "gsldrc1    %[ftmp4],   0x09(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "mtc1       %[a],       %[ftmp13]                           \n\t"
+            "dmtc1      %[all64],   %[ftmp3]                            \n\t"
+            "uld        %[all64],   0x09(%[src])                        \n\t"
+            "mtc1       %[b],       %[ftmp14]                           \n\t"
+            "dmtc1      %[all64],   %[ftmp4]                            \n\t"
+#endif
             "pshufh     %[ftmp13],  %[ftmp13],      %[ftmp0]            \n\t"
             "pshufh     %[ftmp14],  %[ftmp14],      %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5586,10 +6797,17 @@ void ff_put_vp8_bilinear16_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "psrlh      %[ftmp8],   %[ftmp8],       %[ftmp13]           \n\t"
             "packushb   %[ftmp5],   %[ftmp5],       %[ftmp6]            \n\t"
             "packushb   %[ftmp7],   %[ftmp7],       %[ftmp8]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp5],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp5],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp7],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp7],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp5]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp7]                            \n\t"
+            "usd        %[all64],   0x08(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
@@ -5598,6 +6816,7 @@ void ff_put_vp8_bilinear16_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
               [ftmp10]"=&f"(ftmp[10]),      [ftmp11]"=&f"(ftmp[11]),
               [ftmp12]"=&f"(ftmp[12]),      [ftmp13]"=&f"(ftmp[13]),
               [ftmp14]"=&f"(ftmp[14]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst)
             : [src]"r"(src),                [a]"r"(a),
               [b]"r"(b),
@@ -5628,6 +6847,7 @@ void ff_put_vp8_bilinear16_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     int c = 8 - my, d = my;
     int y;
     double ftmp[15];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -5651,6 +6871,7 @@ void ff_put_vp8_bilinear16_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src1])                       \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src1])                       \n\t"
             "gsldlc1    %[ftmp2],   0x0f(%[src1])                       \n\t"
@@ -5661,6 +6882,18 @@ void ff_put_vp8_bilinear16_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "gsldlc1    %[ftmp4],   0x0f(%[src2])                       \n\t"
             "mtc1       %[d],       %[ftmp14]                           \n\t"
             "gsldrc1    %[ftmp4],   0x08(%[src2])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src1])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src1])                       \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+            "uld        %[all64],   0x00(%[src2])                       \n\t"
+            "mtc1       %[c],       %[ftmp13]                           \n\t"
+            "dmtc1      %[all64],   %[ftmp3]                            \n\t"
+            "uld        %[all64],   0x08(%[src2])                       \n\t"
+            "mtc1       %[d],       %[ftmp14]                           \n\t"
+            "dmtc1      %[all64],   %[ftmp4]                            \n\t"
+#endif
             "pshufh     %[ftmp13],  %[ftmp13],      %[ftmp0]            \n\t"
             "pshufh     %[ftmp14],  %[ftmp14],      %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5695,10 +6928,17 @@ void ff_put_vp8_bilinear16_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "psrlh      %[ftmp8],   %[ftmp8],       %[ftmp13]          \n\t"
             "packushb   %[ftmp5],   %[ftmp5],       %[ftmp6]            \n\t"
             "packushb   %[ftmp7],   %[ftmp7],       %[ftmp8]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp5],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp5],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp7],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp7],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp5]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp7]                            \n\t"
+            "usd        %[all64],   0x08(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
@@ -5707,6 +6947,7 @@ void ff_put_vp8_bilinear16_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
               [ftmp10]"=&f"(ftmp[10]),      [ftmp11]"=&f"(ftmp[11]),
               [ftmp12]"=&f"(ftmp[12]),      [ftmp13]"=&f"(ftmp[13]),
               [ftmp14]"=&f"(ftmp[14]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst)
             : [src1]"r"(src),               [src2]"r"(src+sstride),
               [c]"r"(c),                    [d]"r"(d),
@@ -5740,6 +6981,7 @@ void ff_put_vp8_bilinear16_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     uint8_t tmp_array[528];
     uint8_t *tmp = tmp_array;
     double ftmp[15];
+    uint64_t all64;
 
     for (y = 0; y < h + 1; y++) {
         /*
@@ -5763,6 +7005,7 @@ void ff_put_vp8_bilinear16_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp2],   0x0f(%[src])                        \n\t"
@@ -5773,6 +7016,18 @@ void ff_put_vp8_bilinear16_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "gsldlc1    %[ftmp4],   0x10(%[src])                        \n\t"
             "mtc1       %[b],       %[ftmp14]                           \n\t"
             "gsldrc1    %[ftmp4],   0x09(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[src])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "mtc1       %[a],       %[ftmp13]                           \n\t"
+            "dmtc1      %[all64],   %[ftmp3]                            \n\t"
+            "uld        %[all64],   0x09(%[src])                        \n\t"
+            "mtc1       %[b],       %[ftmp14]                           \n\t"
+            "dmtc1      %[all64],   %[ftmp4]                            \n\t"
+#endif
             "pshufh     %[ftmp13],  %[ftmp13],      %[ftmp0]            \n\t"
             "pshufh     %[ftmp14],  %[ftmp14],      %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5807,10 +7062,17 @@ void ff_put_vp8_bilinear16_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "psrlh      %[ftmp8],   %[ftmp8],       %[ftmp13]           \n\t"
             "packushb   %[ftmp5],   %[ftmp5],       %[ftmp6]            \n\t"
             "packushb   %[ftmp7],   %[ftmp7],       %[ftmp8]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp5],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp5],   0x00(%[tmp])                        \n\t"
             "gssdlc1    %[ftmp7],   0x0f(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp7],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp5]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp7]                            \n\t"
+            "usd        %[all64],   0x08(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
@@ -5819,6 +7081,7 @@ void ff_put_vp8_bilinear16_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
               [ftmp10]"=&f"(ftmp[10]),      [ftmp11]"=&f"(ftmp[11]),
               [ftmp12]"=&f"(ftmp[12]),      [ftmp13]"=&f"(ftmp[13]),
               [ftmp14]"=&f"(ftmp[14]),
+              [all64]"=&r"(all64),
               [tmp]"+&r"(tmp)
             : [src]"r"(src),                [a]"r"(a),
               [b]"r"(b),
@@ -5869,6 +7132,7 @@ void ff_put_vp8_bilinear16_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp2],   0x0f(%[tmp])                        \n\t"
@@ -5879,6 +7143,18 @@ void ff_put_vp8_bilinear16_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "gsldlc1    %[ftmp4],   0x1f(%[tmp])                        \n\t"
             "mtc1       %[d],       %[ftmp14]                           \n\t"
             "gsldrc1    %[ftmp4],   0x18(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[tmp])                        \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+            "uld        %[all64],   0x10(%[tmp])                        \n\t"
+            "mtc1       %[c],       %[ftmp13]                           \n\t"
+            "dmtc1      %[all64],   %[ftmp3]                            \n\t"
+            "uld        %[all64],   0x18(%[tmp])                        \n\t"
+            "mtc1       %[d],       %[ftmp14]                           \n\t"
+            "dmtc1      %[all64],   %[ftmp4]                            \n\t"
+#endif
             "pshufh     %[ftmp13],  %[ftmp13],      %[ftmp0]            \n\t"
             "pshufh     %[ftmp14],  %[ftmp14],      %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5913,10 +7189,17 @@ void ff_put_vp8_bilinear16_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "psrlh      %[ftmp8],   %[ftmp8],       %[ftmp13]           \n\t"
             "packushb   %[ftmp5],   %[ftmp5],       %[ftmp6]            \n\t"
             "packushb   %[ftmp7],   %[ftmp7],       %[ftmp8]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp5],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp5],   0x00(%[dst])                        \n\t"
             "gssdlc1    %[ftmp7],   0x0f(%[dst])                        \n\t"
             "gssdrc1    %[ftmp7],   0x08(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp5]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+            "dmfc1      %[all64],   %[ftmp7]                            \n\t"
+            "usd        %[all64],   0x08(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
@@ -5925,6 +7208,7 @@ void ff_put_vp8_bilinear16_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
               [ftmp10]"=&f"(ftmp[10]),      [ftmp11]"=&f"(ftmp[11]),
               [ftmp12]"=&f"(ftmp[12]),      [ftmp13]"=&f"(ftmp[13]),
               [ftmp14]"=&f"(ftmp[14]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst)
             : [tmp]"r"(tmp),                [c]"r"(c),
               [d]"r"(d),
@@ -5952,6 +7236,7 @@ void ff_put_vp8_bilinear8_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     int a = 8 - mx, b = mx;
     int y;
     double ftmp[9];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -5966,12 +7251,21 @@ void ff_put_vp8_bilinear8_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "mtc1       %[a],       %[ftmp3]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp2],   0x08(%[src])                        \n\t"
             "mtc1       %[b],       %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp2],   0x01(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "mtc1       %[a],       %[ftmp3]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "mtc1       %[b],       %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+#endif
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -5989,13 +7283,19 @@ void ff_put_vp8_bilinear8_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "psrlh      %[ftmp5],   %[ftmp5],       %[ff_pw_3]          \n\t"
             "psrlh      %[ftmp6],   %[ftmp6],       %[ff_pw_3]          \n\t"
             "packushb   %[ftmp5],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp5],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp5],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp5]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst)
             : [src]"r"(src),                [a]"r"(a),
               [b]"r"(b),
@@ -6026,6 +7326,7 @@ void ff_put_vp8_bilinear8_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     int c = 8 - my, d = my;
     int y;
     double ftmp[9];
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -6040,12 +7341,21 @@ void ff_put_vp8_bilinear8_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src1])                       \n\t"
             "mtc1       %[c],       %[ftmp3]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src1])                       \n\t"
             "gsldlc1    %[ftmp2],   0x07(%[src2])                       \n\t"
             "mtc1       %[d],       %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp2],   0x00(%[src2])                       \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src1])                       \n\t"
+            "mtc1       %[c],       %[ftmp3]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x00(%[src2])                       \n\t"
+            "mtc1       %[d],       %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+#endif
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -6063,13 +7373,19 @@ void ff_put_vp8_bilinear8_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "psrlh      %[ftmp5],   %[ftmp5],       %[ff_pw_3]          \n\t"
             "psrlh      %[ftmp6],   %[ftmp6],       %[ff_pw_3]          \n\t"
             "packushb   %[ftmp5],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp5],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp5],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp5]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst)
             : [src1]"r"(src),               [src2]"r"(src+sstride),
               [c]"r"(c),                    [d]"r"(d),
@@ -6103,6 +7419,7 @@ void ff_put_vp8_bilinear8_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     uint8_t tmp_array[136];
     uint8_t *tmp = tmp_array;
     double ftmp[9];
+    uint64_t all64;
 
     for (y = 0; y < h + 1; y++) {
         /*
@@ -6117,12 +7434,21 @@ void ff_put_vp8_bilinear8_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[src])                        \n\t"
             "mtc1       %[a],       %[ftmp3]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[src])                        \n\t"
             "gsldlc1    %[ftmp2],   0x08(%[src])                        \n\t"
             "mtc1       %[b],       %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp2],   0x01(%[src])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[src])                        \n\t"
+            "mtc1       %[a],       %[ftmp3]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x01(%[src])                        \n\t"
+            "mtc1       %[b],       %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+#endif
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -6140,13 +7466,19 @@ void ff_put_vp8_bilinear8_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "psrlh      %[ftmp5],   %[ftmp5],       %[ff_pw_3]          \n\t"
             "psrlh      %[ftmp6],   %[ftmp6],       %[ff_pw_3]          \n\t"
             "packushb   %[ftmp5],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp5],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp5],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp5]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),
+              [all64]"=&r"(all64),
               [tmp]"+&r"(tmp)
             : [src]"r"(src),                [a]"r"(a),
               [b]"r"(b),
@@ -6187,12 +7519,21 @@ void ff_put_vp8_bilinear8_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "mtc1       %[c],       %[ftmp3]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
             "gsldlc1    %[ftmp2],   0x0f(%[tmp])                        \n\t"
             "mtc1       %[d],       %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp2],   0x08(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[tmp])                        \n\t"
+            "mtc1       %[c],       %[ftmp3]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+            "uld        %[all64],   0x08(%[tmp])                        \n\t"
+            "mtc1       %[d],       %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp2]                            \n\t"
+#endif
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpcklbh  %[ftmp5],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -6210,13 +7551,19 @@ void ff_put_vp8_bilinear8_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "psrlh      %[ftmp5],   %[ftmp5],       %[ff_pw_3]          \n\t"
             "psrlh      %[ftmp6],   %[ftmp6],       %[ff_pw_3]          \n\t"
             "packushb   %[ftmp5],   %[ftmp5],       %[ftmp6]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp5],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp5],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp5]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),        [ftmp5]"=&f"(ftmp[5]),
               [ftmp6]"=&f"(ftmp[6]),        [ftmp7]"=&f"(ftmp[7]),
               [ftmp8]"=&f"(ftmp[8]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst)
             : [tmp]"r"(tmp),                [c]"r"(c),
               [d]"r"(d),
@@ -6245,7 +7592,8 @@ void ff_put_vp8_bilinear4_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     int a = 8 - mx, b = mx;
     int y;
     double ftmp[5];
-    uint64_t low32;
+    int low32;
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -6256,10 +7604,10 @@ void ff_put_vp8_bilinear4_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "ulw        %[low32],   0x00(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[a],       %[ftmp3]                            \n\t"
-            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "ulw        %[low32],   0x01(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "mtc1       %[b],       %[ftmp4]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -6272,13 +7620,18 @@ void ff_put_vp8_bilinear4_h_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "paddsh     %[ftmp1],   %[ftmp1],       %[ff_pw_4]          \n\t"
             "psrlh      %[ftmp1],   %[ftmp1],       %[ff_pw_3]          \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
               [dst]"+&r"(dst),
-              [low32]"=&r"(low32)
+              [low32]"=&r"(low32),          [all64]"=&r"(all64)
             : [src]"r"(src),                [a]"r"(a),
               [b]"r"(b),
               [ff_pw_4]"f"(ff_pw_4),        [ff_pw_3]"f"(ff_pw_3)
@@ -6308,7 +7661,8 @@ void ff_put_vp8_bilinear4_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     int c = 8 - my, d = my;
     int y;
     double ftmp[5];
-    uint64_t low32;
+    int low32;
+    uint64_t all64;
 
     for (y = 0; y < h; y++) {
         /*
@@ -6319,10 +7673,10 @@ void ff_put_vp8_bilinear4_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src1])                        \n\t"
+            "ulw        %[low32],   0x00(%[src1])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[c],       %[ftmp3]                            \n\t"
-            "uld        %[low32],   0x00(%[src2])                        \n\t"
+            "ulw        %[low32],   0x00(%[src2])                        \n\t"
             "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "mtc1       %[d],       %[ftmp4]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -6335,13 +7689,18 @@ void ff_put_vp8_bilinear4_v_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "paddsh     %[ftmp1],   %[ftmp1],       %[ff_pw_4]          \n\t"
             "psrlh      %[ftmp1],   %[ftmp1],       %[ff_pw_3]          \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
               [dst]"+&r"(dst),
-              [low32]"=&r"(low32)
+              [low32]"=&r"(low32),          [all64]"=&r"(all64)
             : [src1]"r"(src),               [src2]"r"(src+sstride),
               [c]"r"(c),                    [d]"r"(d),
               [ff_pw_4]"f"(ff_pw_4),        [ff_pw_3]"f"(ff_pw_3)
@@ -6374,7 +7733,8 @@ void ff_put_vp8_bilinear4_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
     uint8_t tmp_array[36];
     uint8_t *tmp = tmp_array;
     double ftmp[5];
-    uint64_t low32;
+    int low32;
+    uint64_t all64;
 
     for (y = 0; y < h + 1; y++) {
         /*
@@ -6385,10 +7745,10 @@ void ff_put_vp8_bilinear4_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         */
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
-            "uld        %[low32],   0x00(%[src])                        \n\t"
+            "ulw        %[low32],   0x00(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp1]                            \n\t"
             "mtc1       %[a],       %[ftmp3]                            \n\t"
-            "uld        %[low32],   0x01(%[src])                        \n\t"
+            "ulw        %[low32],   0x01(%[src])                        \n\t"
             "mtc1       %[low32],   %[ftmp2]                            \n\t"
             "mtc1       %[b],       %[ftmp4]                            \n\t"
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
@@ -6401,13 +7761,18 @@ void ff_put_vp8_bilinear4_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "paddsh     %[ftmp1],   %[ftmp1],       %[ff_pw_4]          \n\t"
             "psrlh      %[ftmp1],   %[ftmp1],       %[ff_pw_3]          \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[tmp])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
               [tmp]"+&r"(tmp),
-              [low32]"=&r"(low32)
+              [low32]"=&r"(low32),          [all64]"=&r"(all64)
             : [src]"r"(src),                [a]"r"(a),
               [b]"r"(b),
               [ff_pw_4]"f"(ff_pw_4),        [ff_pw_3]"f"(ff_pw_3)
@@ -6445,9 +7810,15 @@ void ff_put_vp8_bilinear4_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
         __asm__ volatile (
             "xor        %[ftmp0],   %[ftmp0],       %[ftmp0]            \n\t"
             "mtc1       %[c],       %[ftmp3]                            \n\t"
+#if HAVE_LOONGSON3
             "gsldlc1    %[ftmp1],   0x07(%[tmp])                        \n\t"
             "mtc1       %[d],       %[ftmp4]                            \n\t"
             "gsldrc1    %[ftmp1],   0x00(%[tmp])                        \n\t"
+#elif HAVE_LOONGSON2
+            "uld        %[all64],   0x00(%[tmp])                        \n\t"
+            "mtc1       %[d],       %[ftmp4]                            \n\t"
+            "dmtc1      %[all64],   %[ftmp1]                            \n\t"
+#endif
             "pshufh     %[ftmp3],   %[ftmp3],       %[ftmp0]            \n\t"
             "pshufh     %[ftmp4],   %[ftmp4],       %[ftmp0]            \n\t"
             "punpckhbh  %[ftmp2],   %[ftmp1],       %[ftmp0]            \n\t"
@@ -6458,11 +7829,17 @@ void ff_put_vp8_bilinear4_hv_mmi(uint8_t *dst, ptrdiff_t dstride, uint8_t *src,
             "paddsh     %[ftmp1],   %[ftmp1],       %[ff_pw_4]          \n\t"
             "psrlh      %[ftmp1],   %[ftmp1],       %[ff_pw_3]          \n\t"
             "packushb   %[ftmp1],   %[ftmp1],       %[ftmp0]            \n\t"
+#if HAVE_LOONGSON3
             "gssdlc1    %[ftmp1],   0x07(%[dst])                        \n\t"
             "gssdrc1    %[ftmp1],   0x00(%[dst])                        \n\t"
+#elif HAVE_LOONGSON2
+            "dmfc1      %[all64],   %[ftmp1]                            \n\t"
+            "usd        %[all64],   0x00(%[dst])                        \n\t"
+#endif
             : [ftmp0]"=&f"(ftmp[0]),        [ftmp1]"=&f"(ftmp[1]),
               [ftmp2]"=&f"(ftmp[2]),        [ftmp3]"=&f"(ftmp[3]),
               [ftmp4]"=&f"(ftmp[4]),
+              [all64]"=&r"(all64),
               [dst]"+&r"(dst)
             : [tmp]"r"(tmp),                [c]"r"(c),
               [d]"r"(d),
